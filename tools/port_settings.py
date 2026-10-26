@@ -474,9 +474,9 @@ def _setting_screen(folder: str, spec: dict) -> list:
                           ("color", "#FF2896FF"), ("align", "center"),
                           ("text_y", metrics["spin_y"] if metrics["spin_y"] is not None else (4 if wide else 1)),
                           ("header_bitmap", "bitmaps/arrow_sm_left"), ("footer_bitmap", "bitmaps/arrow_sm_right"),
-                          ("header_bounds", f"{metrics['arrow_y']} -13 {metrics['arrow_b']} -7" if wide
+                          ("header_bounds", f"{metrics['arrow_y']} 28 {metrics['arrow_b']} 34" if wide
                            else f"{metrics['arrow_y']} -6 {metrics['arrow_b']} 0"),
-                          ("footer_bounds", f"{metrics['arrow_y']} 208 {metrics['arrow_b']} 214" if wide
+                          ("footer_bounds", f"{metrics['arrow_y']} 184 {metrics['arrow_b']} 190" if wide
                            else f"{metrics['arrow_y']} 150 {metrics['arrow_b']} 156")],
                          ['<on event="created" run="port setting load"/>'])
     # (each category's row: its label, the screen it opens, its help, and the
@@ -1376,7 +1376,7 @@ def _setup_option_screen(base: str, key: str, rows: list) -> list:
                           ("color", "#FF2896FF"), ("align", "center"), ("text_y", 4),
                           ("list_flags", "items_from_strings"),
                           ("header_bitmap", "bitmaps/arrow_sm_left"), ("footer_bitmap", "bitmaps/arrow_sm_right"),
-                          ("header_bounds", "7 -13 19 -7"), ("footer_bounds", "7 208 19 214")],
+                          ("header_bounds", "7 28 19 34"), ("footer_bounds", "7 184 19 190")],
                          ['<on event="left_mouse" run="mouse spinner 1wide click"/>'])
         lines += _strings(f"{base}/var_{row_key}", strings)
     lines += _strings(f"{base}/{key}_labels", [label for _, label, *_ in rows])
@@ -1630,7 +1630,7 @@ def _item_options_extras() -> list:
                           ("string_list", f"{base}/{strings}"), ("font", "ui\\large_ui"), ("color", "#FF2896FF"),
                           ("align", "center"), ("text_y", 4), ("list_flags", "items_from_strings"),
                           ("header_bitmap", "bitmaps/arrow_sm_left"), ("footer_bitmap", "bitmaps/arrow_sm_right"),
-                          ("header_bounds", "7 -13 19 -7"), ("footer_bounds", "7 208 19 214")],
+                          ("header_bounds", "7 28 19 34"), ("footer_bounds", "7 184 19 190")],
                          ['<on event="left_mouse" run="mouse spinner 1wide click"/>'])
     lines += _strings(f"{base}/var_map_weapons", ["YES", "NO"])
     lines += _strings(f"{base}/var_loadout", ["CATEGORY", "CUSTOM"])
@@ -1654,8 +1654,8 @@ def _player_options_extras() -> list:
         ("string_list", f"{base}/var_aim_assist"), ("font", "ui\\large_ui"),
         ("color", "#FF2896FF"), ("align", "center"), ("text_y", 4),
         ("list_flags", "items_from_strings"), ("header_bitmap", "bitmaps/arrow_sm_left"),
-        ("footer_bitmap", "bitmaps/arrow_sm_right"), ("header_bounds", "7 -13 19 -7"),
-        ("footer_bounds", "7 208 19 214")], ['<on event="left_mouse" run="mouse spinner 1wide click"/>'])
+        ("footer_bitmap", "bitmaps/arrow_sm_right"), ("header_bounds", "7 28 19 34"),
+        ("footer_bounds", "7 184 19 190")], ['<on event="left_mouse" run="mouse spinner 1wide click"/>'])
     return lines + _strings(f"{base}/var_aim_assist", ["ALLOWED", "BLOCK M+KB"])
 
 
@@ -1683,7 +1683,7 @@ def _teamplay_options_extras() -> list:
                           ("color", "#FF2896FF"), ("align", "center"), ("text_y", 4),
                           ("list_flags", "items_from_strings"),
                           ("header_bitmap", "bitmaps/arrow_sm_left"), ("footer_bitmap", "bitmaps/arrow_sm_right"),
-                          ("header_bounds", "7 -13 19 -7"), ("footer_bounds", "7 208 19 214")],
+                          ("header_bounds", "7 28 19 34"), ("footer_bounds", "7 184 19 190")],
                          ['<on event="left_mouse" run="mouse spinner 1wide click"/>'])
         lines += _strings(f"{TEAMPLAY_EDIT}/var_{key}", strings)
     return lines
@@ -1736,8 +1736,8 @@ def _hardcore_spinner(base: str, row: str, spin: str, label: str, strings: str) 
                                         ("align", "center"), ("text_y", 4 if wide else 1),
                                         ("header_bitmap", "bitmaps/arrow_sm_left"),
                                         ("footer_bitmap", "bitmaps/arrow_sm_right"),
-                                        ("header_bounds", "7 -13 19 -7" if wide else "7 -6 19 0"),
-                                        ("footer_bounds", "7 208 19 214" if wide else "7 150 19 156")],
+                                        ("header_bounds", "7 28 19 34" if wide else "7 -6 19 0"),
+                                        ("footer_bounds", "7 184 19 190" if wide else "7 150 19 156")],
                      ['<on event="left_mouse" run="mouse spinner 1wide click"/>'])
     return lines
 
@@ -1761,8 +1761,8 @@ def _hardcore_local_setting(base: str, row: str, label: str, setting: str, strin
                                             ("align", "center"), ("text_y", 4 if wide else 1),
                                             ("header_bitmap", "bitmaps/arrow_sm_left"),
                                             ("footer_bitmap", "bitmaps/arrow_sm_right"),
-                                            ("header_bounds", "7 -13 19 -7" if wide else "7 -6 19 0"),
-                                            ("footer_bounds", "7 208 19 214" if wide else "7 150 19 156")],
+                                            ("header_bounds", "7 28 19 34" if wide else "7 -6 19 0"),
+                                            ("footer_bounds", "7 184 19 190" if wide else "7 150 19 156")],
                      ['<on event="created" run="port setting load"/>',
                       '<on event="deleted" run="port setting save"/>',
                       '<on event="left_mouse" run="mouse spinner 1wide click"/>'])
