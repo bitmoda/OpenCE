@@ -508,6 +508,15 @@ void input_abstraction_update_device_changes(
 	return;
 }
 
+/* port: config.toml's controller sensitivity. Declared here because the
+Windows build compiles this file as C89 with warnings off, so a missing
+prototype is an implicit int. config_real returns a double, which this
+32-bit ABI passes in the x87 stack, not EAX. The caller then keeps that
+value on the stack. Two calls a frame fill all eight registers, and the
+frame time, the menu camera and the biped animations that run afterwards
+come back invalid. */
+double config_real(const char *name);
+
 void input_abstraction_update(
 	void)
 {
