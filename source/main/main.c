@@ -695,6 +695,12 @@ static void main_skip_private(
 	void);
 static void main_update_time(
 	void);
+static unsigned __int64 main_vertical_blank_index(
+	void);
+static void main_vertical_blank_index_increment(
+	void);
+static real main_real_seconds(
+	real seconds);
 static void main_frame_rate_debug(
 	void);
 
@@ -1838,24 +1844,55 @@ void main_print_version(
 	return;
 }
 
+/* the counter is 64-bit and this build is 32-bit: a plain increment is two
+stores, and a read between them comes back 2^32 blanks off */
+static unsigned __int64 main_vertical_blank_index(
+	void)
+{
+	return __atomic_load_n(
+		(unsigned __int64 *)&rasterizer_globals.frame_and_vertical_blank_index,
+		__ATOMIC_RELAXED);
+}
+
+static void main_vertical_blank_index_increment(
+	void)
+{
+	__atomic_fetch_add(
+		(unsigned __int64 *)&rasterizer_globals.frame_and_vertical_blank_index,
+		(unsigned __int64)1,
+		__ATOMIC_RELAXED);
+}
+
+/* PIN keeps a NaN, because the comparison is false. The tick clock and the
+menu camera would then stay illegal for the rest of the session. */
+static real main_real_seconds(
+	real seconds)
+{
+	if (!valid_real(seconds) || seconds < 0.0f)
+		return 0.0f;
+	return seconds;
+}
+
 void main_vertical_blank_interrupt_handler(
 	unsigned long context)
 {
-	rasterizer_globals.frame_and_vertical_blank_index++;
+	unsigned __int64 blank_index;
+
+	(void)context;
+	main_vertical_blank_index_increment();
+	blank_index = main_vertical_blank_index();
 	if (!main_globals.d3d_flip_count)
 	{
-		rasterizer_globals.previous_frame_and_vertical_blank_index =
-			rasterizer_globals.frame_and_vertical_blank_index;
+		rasterizer_globals.previous_frame_and_vertical_blank_index = blank_index;
 	}
 	else if (*main_globals.d3d_flip_count != rasterizer_globals.d3d_flip_count)
 	{
 		main_globals.vblank_flip_deltas[main_globals.vblank_flip_delta_index] =
-			(short)((short)rasterizer_globals.frame_and_vertical_blank_index -
+			(short)((short)blank_index -
 				(short)rasterizer_globals.previous_frame_and_vertical_blank_index);
 		main_globals.vblank_flip_delta_index =
 			(short)((main_globals.vblank_flip_delta_index + 1) % 15);
-		rasterizer_globals.previous_frame_and_vertical_blank_index =
-			rasterizer_globals.frame_and_vertical_blank_index;
+		rasterizer_globals.previous_frame_and_vertical_blank_index = blank_index;
 		rasterizer_globals.d3d_flip_count = *main_globals.d3d_flip_count;
 	}
 
@@ -2455,7 +2492,7 @@ static void main_reset_time(
 	void)
 {
 	main_globals.frame_start_milliseconds = system_milliseconds();
-	main_globals.rasterizer_target_index = rasterizer_globals.vertical_blank_index;
+	main_globals.rasterizer_target_index = (__int64)main_vertical_blank_index();
 	return;
 }
 
@@ -2503,10 +2540,9 @@ static void main_update_time_unthrottled(
 	}
 
 	main_globals.frame_start_milliseconds = system_milliseconds();
-	main_globals.seconds_elapsed = seconds_elapsed;
-	profile_seconds_elapsed(seconds_elapsed);
-	main_globals.rasterizer_initial_index =
-		rasterizer_globals.frame_and_vertical_blank_index;
+	main_globals.seconds_elapsed = main_real_seconds(seconds_elapsed);
+	profile_seconds_elapsed(main_globals.seconds_elapsed);
+	main_globals.rasterizer_initial_index = (__int64)main_vertical_blank_index();
 }
 
 static void main_update_time(
@@ -2712,8 +2748,12 @@ static void main_update_time(
 	}
 
 	end_milliseconds = system_milliseconds();
-	if ((__int64)rasterizer_globals.frame_and_vertical_blank_index > target_index)
-		target_index = (__int64)rasterizer_globals.frame_and_vertical_blank_index;
+	{
+		__int64 blank_index = (__int64)main_vertical_blank_index();
+
+		if (blank_index > target_index)
+			target_index = blank_index;
+	}
 
 	if (framerate_throttle)
 	{
@@ -2746,10 +2786,9 @@ static void main_update_time(
 
 	main_globals.frame_start_milliseconds = end_milliseconds;
 	main_globals.rasterizer_target_index = target_index;
-	main_globals.seconds_elapsed = seconds_elapsed;
-	profile_seconds_elapsed(seconds_elapsed);
-	main_globals.rasterizer_initial_index =
-		rasterizer_globals.frame_and_vertical_blank_index;
+	main_globals.seconds_elapsed = main_real_seconds(seconds_elapsed);
+	profile_seconds_elapsed(main_globals.seconds_elapsed);
+	main_globals.rasterizer_initial_index = (__int64)main_vertical_blank_index();
 
 	return;
 }
@@ -2768,20 +2807,19 @@ void main_rasterizer_throttle(
 	boolean synchronized;
 	char const *description;
 
-	entry_index = rasterizer_globals.frame_and_vertical_blank_index;
+	entry_index = (__int64)main_vertical_blank_index();
 	did_throttle = FALSE;
-	main_globals.rasterizer_throttle_start_index =
-		rasterizer_globals.frame_and_vertical_blank_index + 1;
+	main_globals.rasterizer_throttle_start_index = entry_index + 1;
 	if (rasterizer_globals.framerate_throttle && !halo_interpolation_enabled())
 	{
 		target_index = main_globals.rasterizer_target_index;
 		target_index--;
-		if ((__int64)rasterizer_globals.frame_and_vertical_blank_index < target_index)
+		if ((__int64)main_vertical_blank_index() < target_index)
 		{
 			start_milliseconds = system_milliseconds();
 			did_throttle = TRUE;
 			profile_idle_start();
-			while ((__int64)rasterizer_globals.frame_and_vertical_blank_index < target_index)
+			while ((__int64)main_vertical_blank_index() < target_index)
 			{
 				/* port: a sleep between looks, not only while a map
 				precaches: the Xbox spun here, which on a port holds a core
@@ -2802,7 +2840,7 @@ void main_rasterizer_throttle(
 		}
 	}
 
-	end_index = rasterizer_globals.frame_and_vertical_blank_index + 1;
+	end_index = (__int64)main_vertical_blank_index() + 1;
 	synchronized =
 		main_globals.vblank_interval_current == main_globals.vblank_interval_requested;
 	main_globals.rasterizer_throttle_end_index = end_index;
@@ -2811,7 +2849,7 @@ void main_rasterizer_throttle(
 
 	if (did_throttle)
 	{
-		elapsed_index = rasterizer_globals.frame_and_vertical_blank_index - entry_index;
+		elapsed_index = (__int64)main_vertical_blank_index() - entry_index;
 		description = "THROTTLE";
 	}
 	else
