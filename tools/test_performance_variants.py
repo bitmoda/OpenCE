@@ -58,6 +58,10 @@ typedef float real;
 #define match_assert(file,line,condition) assert(condition)
 #define match_vassert(file,line,condition,message) assert(condition)
 #define error(...) ((void)0)
+static void player_profile_stick_scales_begin(long profile_index) { (void)profile_index; }
+static void player_profile_stick_scales_end(void) {}
+static boolean player_profile_stick_scales_dirty(void) { return FALSE; }
+static void player_profile_stick_scales_commit(long profile_index) { (void)profile_index; }
 enum { game_engine_ctf=1, game_engine_slayer, game_engine_oddball, game_engine_king, game_engine_race };
 enum { NUMBER_OF_GAME_ENGINE_WEAPON_SETS=16, NUMBER_OF_GAME_ENGINE_VEHICLE_SETS=8, MAXIMUM_ODDBALLS=16 };
 enum { SAVED_GAME_FILE_BLOCK_SIZE=512, PLAYLIST_PROFILE_CHECKSUM_DATA_SIZE=104, MAXIMUM_GAME_VARIANT_NAME_LENGTH=12 };

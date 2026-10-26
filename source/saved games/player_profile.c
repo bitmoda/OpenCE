@@ -193,6 +193,10 @@ static void player_profile_create_default_profiles_on_disk(
 static void player_profile_write(
 	long player_profile_index,
 	struct player_profile *profile);
+/* port: horizontal and vertical look, kept after the checksum (menu_functions.c) */
+void player_profile_stick_scales_remember(long profile_index, void const *padding, long size,
+	long look_sensitivity);
+void player_profile_stick_scales_store(long profile_index, void *padding, long size);
 
 /* ---------- globals */
 
@@ -711,6 +715,12 @@ static boolean player_profile_read(
 					if (!csmemcmp(&checksum, block+sizeof(struct player_profile), sizeof(checksum)))
 					{
 						csmemcpy(profile, block, sizeof(struct player_profile));
+						player_profile_stick_scales_remember(
+							player_profile_index,
+							block + sizeof(struct player_profile) + sizeof(XCALCSIG_SIGNATURE),
+							(long)(SAVED_GAME_FILE_BLOCK_SIZE - sizeof(struct player_profile) -
+								sizeof(XCALCSIG_SIGNATURE)),
+							profile->controller_settings.look_sensitivity);
 					}
 					else
 					{
@@ -735,6 +745,8 @@ static boolean player_profile_read(
 							MAXIMUM_PLAYER_PROFILE_NAME_LENGTH-1);
 						sanitized_profile.player_name[MAXIMUM_PLAYER_PROFILE_NAME_LENGTH-1] = 0;
 						csmemcpy(profile, &sanitized_profile, sizeof(struct player_profile));
+						player_profile_stick_scales_remember(player_profile_index, NULL, 0,
+							profile->controller_settings.look_sensitivity);
 					}
 
 					/* a sanitized profile still counts as a successful get */
@@ -810,9 +822,15 @@ static unsigned long __stdcall player_profile_write_thread_proc(
 
 		if (saved_game_file_open(&file, player_profile_index))
 		{
+			/* keep the multipliers already in the file when this save does
+			not replace them, then write the profile over that */
+			if (!file_read(&file, sizeof(block), &block))
+				csmemset(&block, 0, sizeof(block));
 			csmemcpy(&block.profile, profile, sizeof(struct player_profile));
 			saved_game_file_generate_checksum(&block.profile, sizeof(block.profile),
 				&block.checksum);
+			player_profile_stick_scales_store(player_profile_index, block.padding,
+				(long)sizeof(block.padding));
 
 			if (!file_set_position(&file, 0) ||
 				!file_write(&file, sizeof(block), &block))

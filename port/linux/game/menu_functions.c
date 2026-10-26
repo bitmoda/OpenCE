@@ -33,7 +33,8 @@ calls them from PC_MENU_FUNCTION_BASE on):
   shown a group at a time ("controls update menu"); "controls begin
   binding" takes the next key or button pressed for the binding left and
   right choose ("controls binding slot"); OK ("controls screen change set")
-  writes them, "controls screen defaults" shows the defaults.
+  writes them and the profile's controller settings (the same ones Gamepads
+  saves), "controls screen defaults" shows the defaults.
 
 A spinner's values are its strings' (setting= and values= in its <widget>,
 menu_tags.c's pc_menu_setting).
@@ -328,11 +329,241 @@ static boolean profile_setting_boolean(short field)
 	return field != 0 && field != 4 && field != 5;
 }
 
+/* horizontal and vertical look, kept beside the profile (player_profile.c
+writes them after the checksum: the profile itself is full). The steps are
+the Xbox look sensitivity (player_ui.c's yaw and pitch tables): 3 is the
+original setting. A profile without this record uses its look sensitivity
+for both axes. */
+#define STICK_SCALE_COUNT 10
+#define STICK_SCALE_DEFAULT 2
+#define STICK_SCALE_MAGIC 0x534C5831ul
+
+/* the same tables as set_local_player_controls_from_player_profile */
+static float const look_yaw_rate[STICK_SCALE_COUNT] = {
+	80.f, 100.f, 120.f, 140.f, 160.f, 180.f, 200.f, 220.f, 240.f, 260.f
+};
+static float const look_pitch_rate[STICK_SCALE_COUNT] = {
+	40.f, 50.f, 60.f, 70.f, 80.f, 90.f, 100.f, 110.f, 120.f, 130.f
+};
+static char const *const stick_scale_text[STICK_SCALE_COUNT] = {
+	"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
+};
+static struct
+{
+	char const *name;
+	byte default_index;
+} const profile_stick_settings[] =
+{
+	{ "profile.horizontal_sensitivity", 2 },
+	{ "profile.vertical_sensitivity", 2 },
+};
+
+static struct
+{
+	long profile_index;
+	unsigned char horizontal;
+	unsigned char vertical;
+	boolean used;
+} stick_scale_cache[32];
+static unsigned char stick_edit_horizontal;
+static unsigned char stick_edit_vertical;
+static unsigned char stick_edit_horizontal_saved;
+static unsigned char stick_edit_vertical_saved;
+static boolean stick_edit_open;
+
+void input_abstraction_set_look_rates(short controller_index, real yaw_rate, real pitch_rate);
+
+static short stick_scale_which(char const *name)
+{
+	short index;
+
+	for (index = 0; index < (short)NUMBEROF(profile_stick_settings); index++)
+	{
+		if (!strcmp(name, profile_stick_settings[index].name))
+			return index;
+	}
+	return -1;
+}
+
+static unsigned char look_step_index(long sensitivity)
+{
+	if (sensitivity < 1)
+		return STICK_SCALE_DEFAULT;
+	if (sensitivity > STICK_SCALE_COUNT)
+		return STICK_SCALE_COUNT - 1;
+	return (unsigned char)(sensitivity - 1);
+}
+
+static unsigned char stick_scale_from_text(char const *value)
+{
+	unsigned char index;
+	double number;
+
+	for (index = 0; index < STICK_SCALE_COUNT; index++)
+	{
+		if (!strcmp(value, stick_scale_text[index]))
+			return index;
+	}
+	number = atof(value);
+	return look_step_index((long)(number + 0.5));
+}
+
+static boolean stick_scale_find(long profile_index, short *slot)
+{
+	short index;
+
+	for (index = 0; index < (short)NUMBEROF(stick_scale_cache); index++)
+	{
+		if (stick_scale_cache[index].used && stick_scale_cache[index].profile_index == profile_index)
+		{
+			*slot = index;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+static short stick_scale_slot(long profile_index)
+{
+	short index;
+	short free_slot;
+
+	if (stick_scale_find(profile_index, &index))
+		return index;
+	free_slot = 0;
+	for (index = 0; index < (short)NUMBEROF(stick_scale_cache); index++)
+	{
+		if (!stick_scale_cache[index].used)
+		{
+			free_slot = index;
+			break;
+		}
+	}
+	stick_scale_cache[free_slot].used = TRUE;
+	stick_scale_cache[free_slot].profile_index = profile_index;
+	stick_scale_cache[free_slot].horizontal = STICK_SCALE_DEFAULT;
+	stick_scale_cache[free_slot].vertical = STICK_SCALE_DEFAULT;
+	return free_slot;
+}
+
+static boolean stick_scale_marked(unsigned char const *bytes, unsigned long magic)
+{
+	return bytes[0] == (unsigned char)magic &&
+		bytes[1] == (unsigned char)(magic >> 8) &&
+		bytes[2] == (unsigned char)(magic >> 16) &&
+		bytes[3] == (unsigned char)(magic >> 24);
+}
+
+void player_profile_stick_scales_remember(long profile_index, void const *padding, long size,
+	long look_sensitivity)
+{
+	unsigned char const *bytes = padding;
+	unsigned char horizontal;
+	unsigned char vertical;
+	short slot;
+
+	horizontal = look_step_index(look_sensitivity);
+	vertical = horizontal;
+	/* four marker bytes, then the two steps: unsigned long is 8 bytes on
+	the Mac build, so the marker is written a byte at a time. An older
+	multiplier record is ignored, and both axes follow look sensitivity. */
+	if (bytes && size >= 6 && stick_scale_marked(bytes, STICK_SCALE_MAGIC))
+	{
+		if (bytes[4] < STICK_SCALE_COUNT)
+			horizontal = bytes[4];
+		if (bytes[5] < STICK_SCALE_COUNT)
+			vertical = bytes[5];
+	}
+	slot = stick_scale_slot(profile_index);
+	stick_scale_cache[slot].horizontal = horizontal;
+	stick_scale_cache[slot].vertical = vertical;
+}
+
+void player_profile_stick_scales_store(long profile_index, void *padding, long size)
+{
+	unsigned char *bytes = padding;
+	short slot;
+
+	if (!bytes || size < 6 || !stick_scale_find(profile_index, &slot))
+		return;
+	bytes[0] = (unsigned char)STICK_SCALE_MAGIC;
+	bytes[1] = (unsigned char)(STICK_SCALE_MAGIC >> 8);
+	bytes[2] = (unsigned char)(STICK_SCALE_MAGIC >> 16);
+	bytes[3] = (unsigned char)(STICK_SCALE_MAGIC >> 24);
+	bytes[4] = stick_scale_cache[slot].horizontal;
+	bytes[5] = stick_scale_cache[slot].vertical;
+}
+
+void player_profile_stick_scales_begin(long profile_index)
+{
+	short slot;
+
+	stick_edit_horizontal = STICK_SCALE_DEFAULT;
+	stick_edit_vertical = STICK_SCALE_DEFAULT;
+	if (stick_scale_find(profile_index, &slot))
+	{
+		stick_edit_horizontal = stick_scale_cache[slot].horizontal;
+		stick_edit_vertical = stick_scale_cache[slot].vertical;
+	}
+	stick_edit_horizontal_saved = stick_edit_horizontal;
+	stick_edit_vertical_saved = stick_edit_vertical;
+	stick_edit_open = TRUE;
+}
+
+void player_profile_stick_scales_end(void)
+{
+	stick_edit_open = FALSE;
+}
+
+boolean player_profile_stick_scales_dirty(void)
+{
+	return stick_edit_open &&
+		(stick_edit_horizontal != stick_edit_horizontal_saved ||
+			stick_edit_vertical != stick_edit_vertical_saved);
+}
+
+void player_profile_stick_scales_commit(long profile_index)
+{
+	struct player_profile *profile;
+	short slot;
+
+	if (!stick_edit_open)
+		return;
+	slot = stick_scale_slot(profile_index);
+	stick_scale_cache[slot].horizontal = stick_edit_horizontal;
+	stick_scale_cache[slot].vertical = stick_edit_vertical;
+	/* the profile's own look sensitivity stays the horizontal step, which
+	is what the Xbox used for both axes */
+	profile = player_ui_get_edit_player_profile();
+	if (profile)
+		profile->controller_settings.look_sensitivity = (byte)(stick_edit_horizontal + 1);
+}
+
+void player_profile_stick_scales_apply(long profile_index, short controller_index)
+{
+	unsigned char horizontal = STICK_SCALE_DEFAULT;
+	unsigned char vertical = STICK_SCALE_DEFAULT;
+	short slot;
+
+	if (stick_scale_find(profile_index, &slot))
+	{
+		horizontal = stick_scale_cache[slot].horizontal;
+		vertical = stick_scale_cache[slot].vertical;
+	}
+	if (horizontal >= STICK_SCALE_COUNT)
+		horizontal = STICK_SCALE_DEFAULT;
+	if (vertical >= STICK_SCALE_COUNT)
+		vertical = STICK_SCALE_DEFAULT;
+	input_abstraction_set_look_rates(controller_index, look_yaw_rate[horizontal], look_pitch_rate[vertical]);
+}
+
 /* a setting's value as text, or (default_value) its default: config.toml's,
 or the profile's */
 static boolean setting_text(char const *name, char *text, unsigned int size, boolean default_value)
 {
 	short index;
+	short which;
+	unsigned char scale;
 
 	if (strncmp(name, "profile.", 8))
 	{
@@ -358,6 +589,28 @@ static boolean setting_text(char const *name, char *text, unsigned int size, boo
 				scale = 1;
 			snprintf(text, size, "%ldx%ld", 640 * scale, 480 * scale);
 		}
+		return TRUE;
+	}
+	which = stick_scale_which(name);
+	if (which >= 0)
+	{
+		short slot;
+		long profile_index;
+
+		if (default_value)
+			scale = profile_stick_settings[which].default_index;
+		else if (stick_edit_open)
+			scale = which == 0 ? stick_edit_horizontal : stick_edit_vertical;
+		else
+		{
+			profile_index = player_ui_get_edit_profile_index();
+			scale = STICK_SCALE_DEFAULT;
+			if (profile_index != NONE && stick_scale_find(profile_index, &slot))
+				scale = which == 0 ? stick_scale_cache[slot].horizontal : stick_scale_cache[slot].vertical;
+		}
+		if (scale >= STICK_SCALE_COUNT)
+			scale = STICK_SCALE_DEFAULT;
+		snprintf(text, size, "%s", stick_scale_text[scale]);
 		return TRUE;
 	}
 	for (index = 0; index < NUMBEROF(profile_settings); index++)
@@ -389,9 +642,21 @@ static boolean setting_text(char const *name, char *text, unsigned int size, boo
 static boolean setting_write(char const *name, char const *value)
 {
 	short index;
+	short which;
 
 	if (strncmp(name, "profile.", 8))
 		return config_write(name, value);
+	which = stick_scale_which(name);
+	if (which >= 0)
+	{
+		if (!stick_edit_open)
+			return FALSE;
+		if (which == 0)
+			stick_edit_horizontal = stick_scale_from_text(value);
+		else
+			stick_edit_vertical = stick_scale_from_text(value);
+		return TRUE;
+	}
 	for (index = 0; index < NUMBEROF(profile_settings); index++)
 	{
 		struct player_profile *profile = player_ui_get_edit_player_profile();
@@ -438,12 +703,23 @@ static boolean setting_save(struct widget_instance *widget)
 		return FALSE;
 	if (widget->parameters.list.selected_index == setting->loaded_index)
 		return TRUE;
-	if (!config_write(setting->setting, setting->values[widget->parameters.list.selected_index]))
+	if (!strncmp(setting->setting, "profile.", 8))
+	{
+		if (!setting_write(setting->setting, setting->values[widget->parameters.list.selected_index]))
+		{
+			platform_log("menus: could not set %s", setting->setting);
+			return FALSE;
+		}
+		platform_log("menus: %s = %s", setting->setting, setting->values[widget->parameters.list.selected_index]);
+	}
+	else if (!config_write(setting->setting, setting->values[widget->parameters.list.selected_index]))
 	{
 		platform_log("menus: could not write %s to config.toml", setting->setting);
 		return FALSE;
 	}
-	platform_log("menus: %s = %s (from the next start)", setting->setting, setting->values[widget->parameters.list.selected_index]);
+	else
+		platform_log("menus: %s = %s (from the next start)", setting->setting,
+			setting->values[widget->parameters.list.selected_index]);
 	setting->loaded_index = widget->parameters.list.selected_index;
 	return TRUE;
 }
@@ -2085,10 +2361,11 @@ static boolean coop_player2_choose(short controller)
 
 /* ---------- Controls Setup: the keyboard and mouse's controls
 (port/linux/include/halo_keyboard.h), shown a group at a time, two
-bindings each */
+bindings each. A group has at most CONTROL_ROWS, the tall rows the
+other settings screens use. */
 
 #define CONTROL_BINDINGS 2
-#define CONTROL_ROWS 7
+#define CONTROL_ROWS 4
 #define CONTROL_NAME_LENGTH 32
 
 static struct
@@ -2102,23 +2379,23 @@ static struct
 	{ "controls.move_backward", L"MOVE BACKWARD", 0 },
 	{ "controls.strafe_left", L"STRAFE LEFT", 0 },
 	{ "controls.strafe_right", L"STRAFE RIGHT", 0 },
-	{ "controls.jump", L"JUMP", 0 },
-	{ "controls.crouch", L"CROUCH", 0 },
-	{ "controls.fire", L"FIRE", 1 },
-	{ "controls.throw_grenade", L"THROW GRENADE", 1 },
-	{ "controls.melee", L"MELEE", 1 },
-	{ "controls.reload", L"RELOAD", 1 },
-	{ "controls.zoom", L"ZOOM", 1 },
-	{ "controls.switch_weapon", L"SWITCH WEAPON", 1 },
-	{ "controls.switch_grenade", L"SWITCH GRENADE", 1 },
-	{ "controls.action", L"ACTION", 2 },
-	{ "controls.flashlight", L"FLASHLIGHT", 2 },
-	{ "controls.scoreboard", L"SHOW SCORES", 2 },
-	{ "controls.pause", L"PAUSE MENU", 2 },
-	{ "controls.screenshot", L"SCREENSHOT", 2 },
-	{ "controls.push_to_talk", L"PUSH TO TALK", 3 },
-	{ "controls.chat", L"CHAT", 3 },
-	{ "controls.team_chat", L"TEAM CHAT", 3 },
+	{ "controls.jump", L"JUMP", 1 },
+	{ "controls.crouch", L"CROUCH", 1 },
+	{ "controls.fire", L"FIRE", 2 },
+	{ "controls.throw_grenade", L"THROW GRENADE", 2 },
+	{ "controls.melee", L"MELEE", 2 },
+	{ "controls.reload", L"RELOAD", 2 },
+	{ "controls.zoom", L"ZOOM", 3 },
+	{ "controls.switch_weapon", L"SWITCH WEAPON", 3 },
+	{ "controls.switch_grenade", L"SWITCH GRENADE", 3 },
+	{ "controls.action", L"ACTION", 4 },
+	{ "controls.flashlight", L"FLASHLIGHT", 4 },
+	{ "controls.pause", L"PAUSE MENU", 4 },
+	{ "controls.screenshot", L"SCREENSHOT", 4 },
+	{ "controls.scoreboard", L"SHOW SCORES", 5 },
+	{ "controls.push_to_talk", L"PUSH TO TALK", 5 },
+	{ "controls.chat", L"CHAT", 5 },
+	{ "controls.team_chat", L"TEAM CHAT", 5 },
 };
 
 static struct
@@ -2162,8 +2439,10 @@ static void control_bindings_text(short control, char *text, unsigned int size)
 	snprintf(text, size, "%s%s%s", *first ? first : second, *first && *second ? ", " : "", *first ? second : "");
 }
 
+static boolean profile_settings_save(struct widget_instance *widget);
+
 /* "controls screen init" (and "controls screen defaults": the defaults) */
-static boolean controls_load(boolean defaults)
+static boolean controls_load(struct widget_instance *widget, boolean defaults)
 {
 	short control;
 
@@ -2178,11 +2457,14 @@ static boolean controls_load(boolean defaults)
 		control_bindings_read(control, text);
 	}
 	controls_screen.capturing_control = NONE;
+	if (defaults)
+		settings_each(screen_of(widget), setting_default_show);
 	return TRUE;
 }
 
-/* "controls screen change set" (OK) */
-static boolean controls_save(void)
+/* "controls screen change set" (OK): the keyboard bindings, and the profile's
+controller settings, which Gamepads writes the same way */
+static boolean controls_save(struct widget_instance *widget)
 {
 	short control;
 	boolean result = TRUE;
@@ -2200,6 +2482,8 @@ static boolean controls_save(void)
 				result = FALSE;
 		}
 	}
+	if (!profile_settings_save(widget))
+		result = FALSE;
 	return result;
 }
 
@@ -2333,8 +2617,23 @@ static void controls_update(struct widget_instance *list)
 	}
 	if (list->parameters.list.extended_description)
 	{
-		list->parameters.list.extended_description->parameters.text_box.string_list_index =
-			controls_screen.capturing_control != NONE ? 2 : focused_row ? 1 : 0;
+		/* help_strings: a profile row's label, 5 for the key group, 6 for a
+		binding row, 7 while a key is being chosen */
+		short index = 5;
+
+		if (controls_screen.capturing_control != NONE)
+			index = 7;
+		else if (focused_row)
+			index = 6;
+		else if (list->focused_child && !strncmp(list->focused_child->name, "op_", 3) &&
+			strncmp(list->focused_child->name, "op_command_", 11) && list->focused_child->child)
+		{
+			short label = pc_menu_string_index(list->focused_child->child->definition_tag_index);
+
+			if (label != NONE && label < 5)
+				index = label;
+		}
+		list->parameters.list.extended_description->parameters.text_box.string_list_index = index;
 	}
 }
 
@@ -4822,11 +5121,10 @@ static boolean profile_save_changes(struct widget_instance *widget, boolean *wid
 	return TRUE;
 }
 
-/* "port profile settings save" (Gamepads' OK in a single-player campaign:
-menu_tags.c's pause_settings_patch): the profile saved at once, not on
-Settings' OK, so that the campaign's next save of the player's profile
-keeps it; saving makes it the player's own (player_ui_save_profile), and it
-is edited again from what was saved, for Settings to go on with */
+/* "port profile settings save" (Gamepads' OK, and Controls Setup's OK after
+its key bindings): the profile saved at once, so a change in either screen
+stays on it. Saving makes it the player's own (player_ui_save_profile), and
+it is edited again from what was saved, for Settings to go on with */
 static boolean profile_settings_save(struct widget_instance *widget)
 {
 	long index = player_ui_get_edit_profile_index();
@@ -7139,16 +7437,22 @@ static boolean spinner_mouse_click(struct widget_instance *widget, struct event_
 	widget->parameters.list.selected_index = selected;
 	widget->parameters.list.last_list_tab_direction = mouse_x < mid_x ? -15 : 15;
 
-	/* Save the setting if it has one (uses pc_menu_setting like port setting save) */
+	/* a config setting is written now. A profile setting waits for the
+	screen's OK, which compares the choice with the one the spinner opened on */
 	struct pc_menu_setting *setting = pc_menu_setting_get(widget->definition_tag_index);
-	if (setting && widget->parameters.list.selected_index >= 0 &&
+	if (setting && strncmp(setting->setting, "profile.", 8) &&
+		widget->parameters.list.selected_index >= 0 &&
 		widget->parameters.list.selected_index < setting->value_count)
 	{
-		if (!config_write(setting->setting, setting->values[widget->parameters.list.selected_index]))
+		char const *value = setting->values[widget->parameters.list.selected_index];
+
+		if (!config_write(setting->setting, value))
 			platform_log("menus: could not write %s to config.toml", setting->setting);
 		else
-			platform_log("menus: %s = %s (from the next start)", setting->setting, setting->values[widget->parameters.list.selected_index]);
-		setting->loaded_index = widget->parameters.list.selected_index;
+		{
+			platform_log("menus: %s = %s (from the next start)", setting->setting, value);
+			setting->loaded_index = widget->parameters.list.selected_index;
+		}
 	}
 
 	/* Play audio feedback */
@@ -7524,11 +7828,11 @@ boolean pc_menu_event_function_invoke(
 		}
 		else if (!strcmp(name, "controls screen init") || !strcmp(name, "controls screen defaults"))
 		{
-			return controls_load(!strcmp(name, "controls screen defaults"));
+			return controls_load(widget, !strcmp(name, "controls screen defaults"));
 		}
 		else if (!strcmp(name, "controls screen change set"))
 		{
-			return controls_save();
+			return controls_save(widget);
 		}
 		else if (!strcmp(name, "controls begin binding"))
 		{

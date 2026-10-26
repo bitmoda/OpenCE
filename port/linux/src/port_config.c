@@ -281,7 +281,13 @@ static const struct config_setting config_settings[] =
 		"aim slows over a target and follows a moving one. false: none, as a\n"
 		"mouse (the bullets' own autoaim stays)." },
 	{ "input.mouse_sensitivity", _config_real, "1.0", "HALO_MOUSE_SENSITIVITY", _environment_value, _platform_desktop,
-		"How far the view turns for the mouse's movement." },
+		"No longer read. Mouse Settings uses input.mouse_look_horizontal." },
+	{ "input.mouse_look_horizontal", _config_integer, "3", "HALO_MOUSE_LOOK_HORIZONTAL", _environment_value, _platform_desktop,
+		"How fast the mouse turns the view left and right, the Xbox look\n"
+		"sensitivity: 1 through 10, and 3 is the original setting." },
+	{ "input.mouse_look_vertical", _config_integer, "0", "HALO_MOUSE_LOOK_VERTICAL", _environment_value, _platform_desktop,
+		"How fast the mouse turns the view up and down, on the same 1 to 10.\n"
+		"0 uses input.mouse_look_horizontal." },
 	{ "input.invert_mouse", _config_boolean, "false", "HALO_MOUSE_INVERT", _environment_set_is_true, _platform_desktop,
 		"Moving the mouse forward looks down." },
 	{ "network.block_mouse_aim_assist", _config_boolean, "false", "HALO_NET_BLOCK_MOUSE_AIM_ASSIST", _environment_value,
@@ -293,14 +299,13 @@ static const struct config_setting config_settings[] =
 		"target) stays either way." },
 	{ "input.mouse_vertical_sensitivity", _config_real, "0.0", "HALO_MOUSE_VERTICAL_SENSITIVITY", _environment_value,
 		_platform_desktop,
-		"How far the view turns up and down for the mouse's movement; 0 for the\n"
-		"same as input.mouse_sensitivity." },
+		"No longer read. Mouse Settings uses input.mouse_look_vertical." },
 	{ "input.controller_look_sensitivity", _config_real, "1.0", "HALO_CONTROLLER_LOOK_SENSITIVITY", _environment_value, _platform_all,
-		"Right stick look sensitivity (controller). 1.0 is the profile's look\n"
-		"sensitivity, 0.5 is half, 2.0 is double." },
+		"No longer read. Controls Setup and Gamepads save horizontal look on\n"
+		"the profile, 1 to 10, and 3 is the original setting." },
 	{ "input.controller_move_sensitivity", _config_real, "1.0", "HALO_CONTROLLER_MOVE_SENSITIVITY", _environment_value, _platform_all,
-		"Left stick move sensitivity (controller). 1.0 is the base speed, 0.5\n"
-		"is half, 2.0 is double." },
+		"No longer read. Controls Setup and Gamepads save vertical look on\n"
+		"the profile, 1 to 10, and 3 is the original setting." },
 
 	/* the keyboard and mouse's own controls (port/linux/src/xinput_sdl.c) */
 	{ "controls.move_forward", _config_string, "\"W\"", "HALO_KEY_MOVE_FORWARD", _environment_value, _platform_all,

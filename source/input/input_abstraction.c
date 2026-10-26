@@ -209,6 +209,23 @@ static struct
 	long reload_down_time;
 } keyboard_controls[MAXIMUM_GAMEPADS];
 
+/* port: the profile's horizontal and vertical look, degrees a second.
+0 until a profile sets them, and the update below then uses the
+preferences' rates */
+static real stick_yaw_rate[MAXIMUM_GAMEPADS];
+static real stick_pitch_rate[MAXIMUM_GAMEPADS];
+
+void input_abstraction_set_look_rates(
+	short controller_index,
+	real yaw_rate,
+	real pitch_rate)
+{
+	if (controller_index < 0 || controller_index >= MAXIMUM_GAMEPADS)
+		return;
+	stick_yaw_rate[controller_index] = yaw_rate;
+	stick_pitch_rate[controller_index] = pitch_rate;
+}
+
 static void keyboard_hold_ticks(
 	byte *ticks,
 	long *down_time,
@@ -508,15 +525,6 @@ void input_abstraction_update_device_changes(
 	return;
 }
 
-/* port: config.toml's controller sensitivity. Declared here because the
-Windows build compiles this file as C89 with warnings off, so a missing
-prototype is an implicit int. config_real returns a double, which this
-32-bit ABI passes in the x87 stack, not EAX. The caller then keeps that
-value on the stack. Two calls a frame fill all eight registers, and the
-frame time, the menu camera and the biped animations that run afterwards
-come back invalid. */
-double config_real(const char *name);
-
 void input_abstraction_update(
 	void)
 {
@@ -539,34 +547,31 @@ void input_abstraction_update(
 			real_point2d right_stick;
 			long control_index;
 			boolean invert_look;
-			/* declared here: the Windows build compiles game code as C89 */
-			real controller_look_sens;
-			real controller_move_sens;
 
-			controller_look_sens = (float)config_real("input.controller_look_sensitivity");
-			if (!(controller_look_sens > 0.0f))
-				controller_look_sens = 1.0f;
-			controller_move_sens = (float)config_real("input.controller_move_sensitivity");
-			if (!(controller_move_sens > 0.0f))
-				controller_move_sens = 1.0f;
-
-			player_look_yaw_rate[controller_index] = input_abstraction_globals.player_control_preferences[controller_index].yaw_rate * controller_look_sens;
-			player_look_pitch_rate[controller_index] = input_abstraction_globals.player_control_preferences[controller_index].pitch_rate * controller_look_sens;
+			/* horizontal and vertical look are the Xbox rates. Until a
+			profile sets them, the preferences' rates (its look sensitivity,
+			the same tables) stand */
+			player_look_yaw_rate[controller_index] = stick_yaw_rate[controller_index] > 0.f ?
+				stick_yaw_rate[controller_index] :
+				input_abstraction_globals.player_control_preferences[controller_index].yaw_rate;
+			player_look_pitch_rate[controller_index] = stick_pitch_rate[controller_index] > 0.f ?
+				stick_pitch_rate[controller_index] :
+				input_abstraction_globals.player_control_preferences[controller_index].pitch_rate;
 			{
 				real scale;
 
 				left_angle = arctangent(gamepad->sticks[_gamepad_stick_left].y, gamepad->sticks[_gamepad_stick_left].x);
 				scale = 1.0 / MAX(fabs(sine(left_angle)), fabs(cosine(left_angle)));
-				left_stick.x = PIN(gamepad->sticks[_gamepad_stick_left].x * gamepad_axis_normalization_scale * scale * controller_move_sens, -1.f, 1.f);
-				left_stick.y = PIN(gamepad->sticks[_gamepad_stick_left].y * gamepad_axis_normalization_scale * scale * controller_move_sens, -1.f, 1.f);
+				left_stick.x = PIN(gamepad->sticks[_gamepad_stick_left].x * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
+				left_stick.y = PIN(gamepad->sticks[_gamepad_stick_left].y * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
 			}
 			{
 				real scale;
 
 				right_angle = arctangent(gamepad->sticks[_gamepad_stick_right].y, gamepad->sticks[_gamepad_stick_right].x);
 				scale = 1.0 / MAX(fabs(sine(right_angle)), fabs(cosine(right_angle)));
-				right_stick.x = PIN(gamepad->sticks[_gamepad_stick_right].x * gamepad_axis_normalization_scale * scale * controller_look_sens, -1.f, 1.f);
-				right_stick.y = PIN(gamepad->sticks[_gamepad_stick_right].y * gamepad_axis_normalization_scale * scale * controller_look_sens, -1.f, 1.f);
+				right_stick.x = PIN(gamepad->sticks[_gamepad_stick_right].x * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
+				right_stick.y = PIN(gamepad->sticks[_gamepad_stick_right].y * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
 			}
 			for (control_index = 0; control_index < NUMBER_OF_GAME_CONTROLS; control_index++)
 			{

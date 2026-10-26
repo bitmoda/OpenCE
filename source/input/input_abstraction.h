@@ -51,6 +51,12 @@ void input_abstraction_get_local_player_preferences(
 void input_abstraction_update_local_player_preferences(
 	short controller_index,
 	struct game_input_preferences const *preferences);
+/* port: the profile's horizontal and vertical look, in degrees a second
+(the Xbox tables). 0 leaves the preferences' rates */
+void input_abstraction_set_look_rates(
+	short controller_index,
+	real yaw_rate,
+	real pitch_rate);
 struct game_input_state *input_abstraction_get_input_state(
 	short local_player_index);
 /* port: the keyboard and mouse's own controls (input_abstraction.c) */

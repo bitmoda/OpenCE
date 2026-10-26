@@ -112,23 +112,43 @@ static Uint64 touch_aimed_ms = 0;
 worn stick's drift */
 #define STICK_AIMING_DEFLECTION 8000
 
-/* (input.mouse_vertical_sensitivity, read with it) */
-static float vertical_sensitivity = 1.0f;
+/* the Xbox look sensitivity, degrees a second (player_ui.c's tables).
+3 is the original setting. The vertical step 0 uses the horizontal one */
+static const float look_yaw_rate[10] = {
+	80.f, 100.f, 120.f, 140.f, 160.f, 180.f, 200.f, 220.f, 240.f, 260.f
+};
+static const float look_pitch_rate[10] = {
+	40.f, 50.f, 60.f, 70.f, 80.f, 90.f, 100.f, 110.f, 120.f, 130.f
+};
+/* radians per pixel at sensitivity 3. mouse_sensitivity() is the Xbox
+rate against that, so the scale is applied once */
+static const float mouse_pixel_scale = 0.0022f;
+static float vertical_sensitivity = 1.f;
+
+static int look_step(long sensitivity)
+{
+	if (sensitivity < 1)
+		return 2;
+	if (sensitivity > 10)
+		return 9;
+	return (int)sensitivity - 1;
+}
 
 static float mouse_sensitivity(void)
 {
-	static float sensitivity;
+	static float sensitivity = 1.f;
 	static unsigned long read_at = (unsigned long)-1;
 
 	if (read_at != config_changes())
 	{
+		long horizontal = config_integer("input.mouse_look_horizontal");
+		long vertical = config_integer("input.mouse_look_vertical");
+		int yaw_step = look_step(horizontal);
+		int pitch_step = vertical <= 0 ? yaw_step : look_step(vertical);
+
 		read_at = config_changes();
-		sensitivity = (float)config_real("input.mouse_sensitivity");
-		if (sensitivity <= 0.0f)
-			sensitivity = 1.0f;
-		vertical_sensitivity = (float)config_real("input.mouse_vertical_sensitivity");
-		if (vertical_sensitivity <= 0.0f)
-			vertical_sensitivity = sensitivity;
+		sensitivity = look_yaw_rate[yaw_step] / 120.f;
+		vertical_sensitivity = look_pitch_rate[pitch_step] / 60.f;
 	}
 	return sensitivity;
 }
@@ -137,8 +157,6 @@ static float mouse_sensitivity(void)
 game adds these to the facing change of the player on gamepad 0 */
 int halo_linux_mouse_look(short gamepad_index, float *yaw, float *pitch)
 {
-	/* radians per pixel of relative motion at sensitivity 1 */
-	const float scale = 0.0022f;
 	static int invert;
 	static unsigned long read_at = (unsigned long)-1;
 	float x, y;
@@ -161,8 +179,8 @@ int halo_linux_mouse_look(short gamepad_index, float *yaw, float *pitch)
 	pthread_mutex_unlock(&mouse_lock);
 	if (x == 0.0f && y == 0.0f)
 		return FALSE;
-	*yaw = -x * scale * mouse_sensitivity();
-	*pitch = (invert ? y : -y) * scale * vertical_sensitivity;
+	*yaw = -x * mouse_pixel_scale * mouse_sensitivity();
+	*pitch = (invert ? y : -y) * mouse_pixel_scale * vertical_sensitivity;
 	return TRUE;
 }
 

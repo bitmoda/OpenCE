@@ -221,6 +221,12 @@ static void reset_local_player_profile(
 	short local_player_index);
 static void clear_profile_edit_data(
 	void);
+/* port: horizontal and vertical look, kept with the profile (menu_functions.c) */
+void player_profile_stick_scales_begin(long profile_index);
+void player_profile_stick_scales_end(void);
+boolean player_profile_stick_scales_dirty(void);
+void player_profile_stick_scales_commit(long profile_index);
+void player_profile_stick_scales_apply(long profile_index, short controller_index);
 
 /* ---------- globals */
 
@@ -424,6 +430,8 @@ boolean player_ui_edit_profile_is_dirty(
 				}
 				player_ui_globals.edit_profile.current.player.flags = current_flags;
 				player_ui_globals.edit_profile.original.player.flags = original_flags;
+				if (player_profile_stick_scales_dirty())
+					result = TRUE;
 				break;
 			}
 
@@ -477,6 +485,7 @@ boolean player0_joystick_set_is_normal(
 void player_ui_end_editing_profile(
 	void)
 {
+	player_profile_stick_scales_end();
 	clear_profile_edit_data();
 
 	return;
@@ -803,6 +812,7 @@ void player_ui_begin_editing_profile(
 {
 	long type;
 
+	player_profile_stick_scales_end();
 	player_ui_globals.edit_profile_index = NONE;
 	type = saved_game_file_get_type(profile_index);
 
@@ -817,6 +827,7 @@ void player_ui_begin_editing_profile(
 					&player_ui_globals.edit_profile.current.player,
 					&player_ui_globals.edit_profile.original.player,
 					sizeof(struct player_profile));
+				player_profile_stick_scales_begin(profile_index);
 			}
 			else
 			{
@@ -875,6 +886,7 @@ boolean player_ui_save_profile(
 				error(_error_silent, "### WARNING: saving player profile even though it hasn't been changed");
 			}
 
+			player_profile_stick_scales_commit(player_ui_globals.edit_profile_index);
 			player_profile_save(
 				player_ui_globals.edit_profile_index,
 				&player_ui_globals.edit_profile.current.player);
@@ -1340,6 +1352,7 @@ void player_ui_set_active_player_profile(
 	struct player_profile *profile)
 {
 	wchar_t previous_name[MAXIMUM_PLAYER_PROFILE_NAME_LENGTH + 1];
+	short controller_index;
 
 	match_assert(
 		"c:\\halo\\SOURCE\\interface\\player_ui.c",
@@ -1361,6 +1374,10 @@ void player_ui_set_active_player_profile(
 		profile,
 		sizeof(*profile));
 	set_local_player_controls_from_player_profile(local_player_index);
+	controller_index = player_ui_globals.single_player_controller[local_player_index];
+	if (controller_index == NONE)
+		controller_index = local_player_index;
+	player_profile_stick_scales_apply(profile_index, controller_index);
 	if (local_player_index == 0)
 		port_server_name_follow_profile(previous_name, profile->player_name);
 	return;
