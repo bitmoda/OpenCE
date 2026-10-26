@@ -714,6 +714,11 @@ typedef char network_game_server_client_machines_offset_assert[
 typedef char network_game_server_countdown_state_offset_assert[
 	offsetof(struct network_game_server, countdown_state) ==
 		8 + HALO_PORT_NETWORK_GAME_SIZE + MAXIMUM_NETWORK_MACHINE_COUNT * 0x10 + 0xC ? 1 : -1];
+/* started_with_single_team occupies one byte of the old padding, so the
+players waiting to join stay where they were */
+typedef char network_game_server_waiting_players_offset_assert[
+	offsetof(struct network_game_server, waiting_players) ==
+		offsetof(struct network_game_server, sent_start_game_message) + 3 ? 1 : -1];
 
 /* ---------- prototypes */
 

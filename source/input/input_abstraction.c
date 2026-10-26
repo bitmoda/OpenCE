@@ -530,12 +530,15 @@ void input_abstraction_update(
 			real_point2d right_stick;
 			long control_index;
 			boolean invert_look;
+			/* declared here: the Windows build compiles game code as C89 */
+			real controller_look_sens;
+			real controller_move_sens;
 
-			real controller_look_sens = (float)config_real("input.controller_look_sensitivity");
-			if (controller_look_sens <= 0.0f)
+			controller_look_sens = (float)config_real("input.controller_look_sensitivity");
+			if (!(controller_look_sens > 0.0f))
 				controller_look_sens = 1.0f;
-			real controller_move_sens = (float)config_real("input.controller_move_sensitivity");
-			if (controller_move_sens <= 0.0f)
+			controller_move_sens = (float)config_real("input.controller_move_sensitivity");
+			if (!(controller_move_sens > 0.0f))
 				controller_move_sens = 1.0f;
 
 			player_look_yaw_rate[controller_index] = input_abstraction_globals.player_control_preferences[controller_index].yaw_rate * controller_look_sens;
