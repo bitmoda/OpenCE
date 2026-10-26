@@ -6964,11 +6964,6 @@ boolean multiple_teams_alive(
 		return TRUE;
 	else
 	{
-		/* port: if the game started with only one team, don't end the game when players leave that team */
-		struct network_game_server *server = global_network_game_server_get();
-		if (server && network_game_server_started_with_single_team(server))
-			return TRUE;
-
 		struct data_iterator iterator;
 		struct player_datum *player;
 		long team_index = NONE;

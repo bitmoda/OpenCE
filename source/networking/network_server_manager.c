@@ -693,8 +693,7 @@ struct network_game_server
 	struct network_player queued_player;
 	boolean queued_player_valid;
 	boolean sent_start_game_message;
-	boolean started_with_single_team;
-	byte padding4BA[1];
+	byte padding4BA[2];
 	/* in-game joins waiting behind queued_player (the Xbox game keeps one
 	and drops any other that arrives meanwhile) */
 	struct network_player waiting_players[MAXIMUM_NETWORK_PLAYER_COUNT];
@@ -794,11 +793,6 @@ static void network_game_server_variant_options(
 	struct game_variant const *variant,
 	struct game_variant_options *options);
 static void network_game_server_remove_players_gone_while_loading(
-	struct network_game_server *server);
-
-boolean server_needs_more_teams(
-	struct network_game_server *server);
-boolean server_players_on_one_machine(
 	struct network_game_server *server);
 
 /* ---------- globals */
@@ -2006,7 +2000,6 @@ boolean network_game_server_start_network_game(
 				network_event("signalling client machines to begin loading for network game (some machines missed it)");
 			server->sent_start_game_message = TRUE;
 			network_game_server_started_with_five_players = server->game.player_count >= 5;
-			server->started_with_single_team = !server_needs_more_teams(server);
 			csmemcpy(network_game_server_start_players, server->game.players,
 				sizeof(network_game_server_start_players));
 			success = TRUE;
@@ -3434,21 +3427,6 @@ boolean server_needs_more_teams(
 				break;
 			}
 		}
-
-		/* port: if all players are on the same team, it's effectively a single-team game */
-		if (needs_more_teams)
-		{
-			short teams_with_players = 0;
-			for (team_index = 0;
-				team_index < NUMBER_OF_MULTIPLAYER_TEAMS;
-				team_index++)
-			{
-				if (player_count_by_team[team_index] > 0)
-					teams_with_players++;
-			}
-			if (teams_with_players <= 1)
-				needs_more_teams = FALSE;
-		}
 	}
 
 	return needs_more_teams;
@@ -3548,14 +3526,6 @@ static boolean server_players_on_one_machine(
 	}
 
 	return first_machine_index != NONE;
-}
-
-/* port: check if the game started with only one team */
-boolean network_game_server_started_with_single_team(
-	struct network_game_server *server)
-{
-	match_assert(NETWORK_SERVER_MANAGER_FILE, 0x6D0, server);
-	return server->started_with_single_team;
 }
 
 /* port: a machine joining or leaving is in the game before its player is.

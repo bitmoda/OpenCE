@@ -13,9 +13,6 @@ between frames. The slot is a local player only while that pane is drawn. */
 #include "game/game_engine.h"
 #include "game/players.h"
 #include "camera/observer.h"
-#include "camera/first_person_camera.h"
-#include "items/weapons.h"
-#include "units/unit_definitions.h"
 #include "interface/first_person_weapons.h"
 #include "interface/hud_weapon.h"
 #include "math/real_math.h"
@@ -622,48 +619,29 @@ static boolean hardcore_views_death_camera(
 	return TRUE;
 }
 
-/* the angle the local camera asks for (player_control_get_field_of_view):
-the unit's own, narrowed by that weapon's zoom. 80 degrees is the menu
-camera. Using it here made this pane wider than the one beside it. */
+/* the stock unzoomed view, narrowed by this unit's zoom the way a
+local scope is. display.fov still applies on top */
 static real hardcore_views_field_of_view(
 	long unit_index)
 {
-	struct unit_datum *unit;
-	struct unit_definition *definition;
-	long weapon_index;
 	real field_of_view;
+	short zoom_level;
+	real magnification;
+	real zoomed;
 
-	field_of_view = DEGREES_TO_RADIANS(70.0f);
-	unit = unit_try_and_get(unit_index);
-	if (!unit)
+	field_of_view = DEGREES_TO_RADIANS(80.0f);
+	if (unit_index == NONE)
 		return field_of_view;
-	definition = unit_definition_get(unit->definition_index);
-	field_of_view = definition->unit.camera_field_of_view;
-	weapon_index = unit_inventory_get_weapon(
-		unit_index, unit->unit.current_weapon_index);
-	if (weapon_index != NONE)
-		field_of_view = weapon_get_field_of_view(
-			weapon_index, field_of_view, unit_get_zoom_level(unit_index));
+	zoom_level = unit_get_zoom_level(unit_index);
+	if (zoom_level == NONE)
+		return field_of_view;
+	magnification = unit_get_zoom_magnification(unit_index, zoom_level);
+	if (!(magnification > 0.0f) || magnification == 1.0f)
+		return field_of_view;
+	zoomed = field_of_view / magnification;
+	if (zoomed > _pi / 100.0f && zoomed < _pi - _pi / 100.0f)
+		return zoomed;
 	return field_of_view;
-}
-
-long hardcore_views_fov_unit(
-	short slot)
-{
-	short window;
-
-	if (!view_slots_ready || slot < 0 || slot >= MAXIMUM_LOCAL_PLAYERS)
-		return NONE;
-	if (local_player_get_player_index(slot) != NONE)
-		return NONE;
-	for (window = 0; window < view_count && window < HARDCORE_VIEW_MAXIMUM; window++)
-	{
-		if (window == local_slot || view_hud_slot[window] != slot || death_on[window])
-			continue;
-		if (object_try_and_get(view_unit[window]))
-			return view_unit[window];
-	}
-	return NONE;
 }
 
 boolean hardcore_views_camera(short window_index, struct observer_result *result)
@@ -697,10 +675,8 @@ boolean hardcore_views_camera(short window_index, struct observer_result *result
 		death_on[window_index] = FALSE;
 		view_unit[window_index] = unit_index;
 		csmemset(result, 0, sizeof(*result));
-		/* the shot travels along the aiming vector. the head's looking
-		vector is a different line, so a camera on it leaves the reticle
-		off the aim. this is the pose a first person camera uses for a unit. */
-		first_person_camera_deterministic(unit_index, &result->position, &forward);
+		unit_get_camera_position(unit_index, &result->position);
+		unit_get_looking_vector(unit_index, &forward);
 		length = forward.i * forward.i + forward.j * forward.j + forward.k * forward.k;
 		if (!(length > 0.0001f))
 			forward = object->object.forward;

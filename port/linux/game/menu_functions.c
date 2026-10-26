@@ -70,7 +70,6 @@ their handlers open opens.
 #include "interface/event_manager.h"
 #include "interface/player_ui.h"
 #include "interface/ui_widget.h"
-#include "interface/ui_widget_definitions.h"
 #include "interface/ui_widget_event_handler_functions.h"
 #include "main/main.h"
 #include "cache/cache_files.h"
@@ -1792,7 +1791,7 @@ the PC version's nine the Xbox's five of the button settings */
 #define PROFILE_GAMEPAD_FRAME 2
 /* frame 9 is Mods' card. The five button layouts follow it. */
 #define PROFILE_FIRST_LAYOUT_FRAME 10
-#define PROFILE_LAYOUT_FRAMES (NUMBER_OF_BUTTON_PRESETS)
+#define PROFILE_LAYOUT_FRAMES (_button_preset_swap_b_and_right_thumb + 1)
 
 /* "port gamepad layout preview" (the picture's own): on Gamepad Setup's
 row, the edited profile's button settings; the port's own (Bumper Jumper),
@@ -7101,62 +7100,6 @@ static boolean hardcore_server_open(struct widget_instance *list)
 	return TRUE;
 }
 
-/* "mouse spinner 1wide click": the PC version's spinners' halves are clicked
-with the mouse; a 1-wide spinner shows one item, its left half goes to the
-previous item, right half to the next */
-static boolean spinner_mouse_click(struct widget_instance *widget, struct event_record *event, long controller)
-{
-	short selected = widget->parameters.list.selected_index;
-	short count = widget->parameters.list.number_of_items;
-
-	if (count == 0)
-		return TRUE;
-
-	/* Get widget bounds from definition */
-	struct ui_widget_definition *definition = ui_widget_definition_get(widget->definition_tag_index);
-	rectangle2d bounds = definition->bounds;
-
-	short mid_x = (bounds.x0 + bounds.x1) / 2;
-	short mouse_x = event->data.stick.x;
-
-	if (mouse_x < mid_x)
-	{
-		/* Left half - previous item */
-		if (selected > 0)
-			selected--;
-		else
-			selected = count - 1;
-	}
-	else
-	{
-		/* Right half - next item */
-		if (selected < count - 1)
-			selected++;
-		else
-			selected = 0;
-	}
-
-	widget->parameters.list.selected_index = selected;
-	widget->parameters.list.last_list_tab_direction = mouse_x < mid_x ? -15 : 15;
-
-	/* Save the setting if it has one (uses pc_menu_setting like port setting save) */
-	struct pc_menu_setting *setting = pc_menu_setting_get(widget->definition_tag_index);
-	if (setting && widget->parameters.list.selected_index >= 0 &&
-		widget->parameters.list.selected_index < setting->value_count)
-	{
-		if (!config_write(setting->setting, setting->values[widget->parameters.list.selected_index]))
-			platform_log("menus: could not write %s to config.toml", setting->setting);
-		else
-			platform_log("menus: %s = %s (from the next start)", setting->setting, setting->values[widget->parameters.list.selected_index]);
-		setting->loaded_index = widget->parameters.list.selected_index;
-	}
-
-	/* Play audio feedback */
-	ui_play_audio_feedback_sound(SOUND_FORWARD);
-
-	return TRUE;
-}
-
 /* "port hardcore server": the same fields Server Setup shows, apart from
 its gametype rows */
 static void hardcore_server_update(struct widget_instance *list)
@@ -7282,10 +7225,6 @@ boolean pc_menu_event_function_invoke(
 		else if (!strcmp(name, "mouse emit x event"))
 		{
 			event_manager_post_button(controller, BUTTON_X);
-		}
-		else if (!strcmp(name, "mouse spinner 1wide click"))
-		{
-			return spinner_mouse_click(widget, event, controller);
 		}
 		else if (!strcmp(name, "emit custom activation event"))
 		{

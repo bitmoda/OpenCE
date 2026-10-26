@@ -70,7 +70,6 @@ static real render_fov_adjust(short local_player_index, real native_vertical_fie
 	double host = host_fov_degrees();
 	long unit_index, weapon_index;
 	struct unit_datum *unit;
-	boolean teammate_view;
 	real unzoomed_angle, unzoomed_tangent, native_tangent, adjusted_tangent;
 
 	if (!initialized || read_at != changes || host_seen != host)
@@ -84,25 +83,13 @@ static real render_fov_adjust(short local_player_index, real native_vertical_fie
 			(real)(tan(degrees * _pi / 360.0) * (9.0 / 16.0)) : 0.0f;
 	}
 	if (!requested_tangent || local_player_index < 0 || local_player_index >= MAXIMUM_LOCAL_PLAYERS ||
-		cinematic_in_progress() || (director_camera_scripted && *director_camera_scripted))
+		cinematic_in_progress() || (director_camera_scripted && *director_camera_scripted) ||
+		director_get_perspective(local_player_index) != _director_perspective_first_person ||
+		director_inhibited_facing(local_player_index))
 	{
 		return native_vertical_field_of_view;
 	}
-	/* a teammate pane's slot has no director and no unit of its own. the
-	view still takes this machine's field of view, or the two panes differ. */
 	unit_index = player_control_get_unit_index(local_player_index);
-	teammate_view = FALSE;
-	if (unit_index == NONE)
-	{
-		unit_index = hardcore_views_fov_unit(local_player_index);
-		teammate_view = unit_index != NONE;
-	}
-	if (!teammate_view &&
-		(director_get_perspective(local_player_index) != _director_perspective_first_person ||
-		director_inhibited_facing(local_player_index)))
-	{
-		return native_vertical_field_of_view;
-	}
 	if (unit_index == NONE)
 		return native_vertical_field_of_view;
 	unit = unit_try_and_get(unit_index);

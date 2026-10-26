@@ -8,8 +8,7 @@
 	<widget name="error/confirm_delete_gametype_button_bar" type="column_list" width="256" height="20" flags="pass_unhandled_to_focused_child up_down_tabs_items left_right_tabs_items">
 		<child widget="error/confirm_delete_gametype_button_cancel" x="128"/>
 		<child widget="error/confirm_delete_gametype_button_ok"/>
-		<on event="right_trigger" run="mouse emit accept event"/>
-</widget>
+	</widget>
 	<widget name="error/confirm_delete_gametype_button_cancel" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="2" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="left_mouse" run="mouse emit back event"/>
 		<on event="a" run="mouse emit back event"/>
@@ -35,8 +34,7 @@
 	<widget name="error/confirm_delete_profile_button_bar" type="column_list" width="256" height="20" flags="pass_unhandled_to_focused_child up_down_tabs_items left_right_tabs_items">
 		<child widget="error/confirm_delete_profile_button_cancel" x="128"/>
 		<child widget="error/confirm_delete_profile_button_ok"/>
-		<on event="right_trigger" run="mouse emit accept event"/>
-</widget>
+	</widget>
 	<widget name="error/confirm_delete_profile_button_cancel" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="2" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="left_mouse" run="mouse emit back event"/>
 		<on event="a" run="mouse emit back event"/>
@@ -62,8 +60,7 @@
 	<widget name="error/confirm_delete_savegame_button_bar" type="column_list" width="256" height="20" flags="pass_unhandled_to_focused_child up_down_tabs_items left_right_tabs_items">
 		<child widget="error/confirm_delete_profile_button_cancel" x="128"/>
 		<child widget="error/confirm_delete_savegame_button_ok"/>
-		<on event="right_trigger" run="mouse emit accept event"/>
-</widget>
+	</widget>
 	<widget name="error/confirm_delete_savegame_button_ok" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="1" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="a" run="load game menu delete finish" close="current" sound="sound\sfx\ui\forward"/>
 		<on event="start" run="load game menu delete finish" close="current" sound="sound\sfx\ui\forward"/>
@@ -89,8 +86,7 @@
 	</widget>
 	<widget name="error/error_modal_button_bar" type="column_list" width="256" height="20" flags="pass_unhandled_to_focused_child up_down_tabs_items left_right_tabs_items">
 		<child widget="error/error_modal_button_ok" x="64"/>
-		<on event="right_trigger" run="mouse emit accept event"/>
-</widget>
+	</widget>
 	<widget name="error/error_modal_button_ok" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="1" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="left_mouse" run="mouse emit accept event"/>
 	</widget>

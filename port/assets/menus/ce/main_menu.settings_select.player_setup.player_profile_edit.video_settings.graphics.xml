@@ -32,8 +32,7 @@
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/button_defaults" y="1"/>
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/button_ok" x="380" y="1"/>
 		<child widget="common_button_cancel" x="510" y="1"/>
-		<on event="right_trigger" run="mouse emit accept event"/>
-</widget>
+	</widget>
 	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/op_high_res_hud" width="512" height="20" flags="pass_unhandled_to_focused_child" bitmap="bitmaps/option_bkds_short" color="#FF2896FF">
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/high_res_hud_label"/>
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/high_res_hud_spinner" x="320" y="1"/>
@@ -121,7 +120,7 @@
 	</widget>
 	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/match_timer_label" type="text" controller="1" width="300" height="20" string_list="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/labels" string_index="9" font="ui\small_ui" color="#FF2896FF" text_x="13" text_y="1">
 	</widget>
-	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/match_timer_spinner" type="spinner" top="0" width="206" height="18" flags="pass_unhandled_to_focused_child left_right_tabs_items" strings="OFF|ON|ON WITH VOICE" setting="display.match_timer" values="off|on|voice" font="ui\small_ui" color="#FF2896FF" align="center" text_y="0" header_bitmap="bitmaps/arrow_sm_left" footer_bitmap="bitmaps/arrow_sm_right" header_bounds="3 28 15 34" footer_bounds="3 184 15 190">
+	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/match_timer_spinner" type="spinner" top="0" width="206" height="18" flags="pass_unhandled_to_focused_child left_right_tabs_items" strings="OFF|ON|ON WITH VOICE" setting="display.match_timer" values="off|on|voice" font="ui\small_ui" color="#FF2896FF" align="center" text_y="0" header_bitmap="bitmaps/arrow_sm_left" footer_bitmap="bitmaps/arrow_sm_right" header_bounds="3 -13 15 -7" footer_bounds="3 208 15 214">
 		<on event="created" run="port setting load"/>
 	</widget>
 	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/op_teammate_views" width="512" height="20" flags="pass_unhandled_to_focused_child" bitmap="bitmaps/option_bkds_short" color="#FF2896FF">
@@ -139,7 +138,7 @@
 	</widget>
 	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/teammate_view_slot_label" type="text" controller="1" width="300" height="20" string_list="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/labels" string_index="11" font="ui\small_ui" color="#FF2896FF" text_x="13" text_y="1">
 	</widget>
-	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/teammate_view_slot_spinner" type="spinner" top="0" width="206" height="18" flags="pass_unhandled_to_focused_child left_right_tabs_items" strings="TOP|BOTTOM|TOP LEFT|TOP RIGHT|BOTTOM LEFT|BOTTOM RIGHT" setting="display.teammate_view_slot" values="top|bottom|top_left|top_right|bottom_left|bottom_right" font="ui\small_ui" color="#FF2896FF" align="center" text_y="0" header_bitmap="bitmaps/arrow_sm_left" footer_bitmap="bitmaps/arrow_sm_right" header_bounds="3 28 15 34" footer_bounds="3 184 15 190">
+	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/teammate_view_slot_spinner" type="spinner" top="0" width="206" height="18" flags="pass_unhandled_to_focused_child left_right_tabs_items" strings="TOP|BOTTOM|TOP LEFT|TOP RIGHT|BOTTOM LEFT|BOTTOM RIGHT" setting="display.teammate_view_slot" values="top|bottom|top_left|top_right|bottom_left|bottom_right" font="ui\small_ui" color="#FF2896FF" align="center" text_y="0" header_bitmap="bitmaps/arrow_sm_left" footer_bitmap="bitmaps/arrow_sm_right" header_bounds="3 -13 15 -7" footer_bounds="3 208 15 214">
 		<on event="created" run="port setting load"/>
 	</widget>
 	<widget name="main_menu/settings_select/player_setup/player_profile_edit/video_settings/graphics/op_enabled" width="512" height="20" flags="pass_unhandled_to_focused_child" bitmap="bitmaps/option_bkds_short" color="#FF2896FF">

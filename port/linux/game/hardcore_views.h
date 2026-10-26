@@ -19,10 +19,6 @@ A dead one uses the death camera. The local player's pane is this
 machine's display.teammate_view_slot. */
 boolean hardcore_views_camera(short window_index, struct observer_result *result);
 
-/* The living unit a spare HUD slot is showing, or NONE. The field of
-view uses it, because that slot has no director of its own. */
-long hardcore_views_fov_unit(short slot);
-
 /* A pane that shows a teammate, not the local player and not the console. */
 boolean hardcore_views_is_teammate_window(short window_index);
 

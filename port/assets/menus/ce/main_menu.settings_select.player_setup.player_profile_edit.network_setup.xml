@@ -23,8 +23,7 @@
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/network_setup/button_defaults" y="1"/>
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/network_setup/button_ok" x="380" y="1"/>
 		<child widget="common_button_cancel" x="510" y="1"/>
-		<on event="right_trigger" run="mouse emit accept event"/>
-</widget>
+	</widget>
 	<widget name="main_menu/settings_select/player_setup/player_profile_edit/network_setup/op_online" width="512" height="28" flags="pass_unhandled_to_focused_child" bitmap="bitmaps/option_bkds" color="#FF2896FF">
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/network_setup/online_label"/>
 		<child widget="main_menu/settings_select/player_setup/player_profile_edit/network_setup/online_spinner" x="320" y="1"/>
