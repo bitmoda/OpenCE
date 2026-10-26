@@ -1860,11 +1860,13 @@ copy of it, and in network co-op FRIENDLY FIRE after SETTINGS. The rows use
 the PC version's pause menu's pitch, so a highlight sits clear of the next
 label. The prompts (B and A) stay that same gap under the last row, and the
 box beside the mission objectives grows with them. Settings there has only
-the items that work in a game (pause_settings_patch), and Gamepads' OK saves
-the profile itself. */
+the items that work in a game (pause_settings_patch). Gamepads is one of
+them: Controls Setup has its rows. Gamepads' OK still saves the profile
+where that screen is opened. */
 
 #define PAUSE_SETTINGS_LIST "main_menu/settings_select/player_setup/player_profile_edit/profile_edit_select_list"
 #define PAUSE_SETTINGS_GAMEPADS_OK "main_menu/settings_select/player_setup/player_profile_edit/gamepad_setup/button_ok"
+#define PAUSE_GAMEPADS_ITEM "main_menu/settings_select/player_setup/player_profile_edit/gamepads_profile_item"
 #define PAUSE_NETWORK_ITEM "main_menu/settings_select/player_setup/player_profile_edit/network_settings_profile_item"
 #define PAUSE_NETWORK_SCREEN \
 	"main_menu/settings_select/player_setup/player_profile_edit/network_setup/in_game/in_game_network_settings_screen"
@@ -2006,10 +2008,17 @@ static void pause_campaign_grow_box(struct ui_widget_definition *widget, short s
 		widget->bounds.y1 = (short)(widget->bounds.y1 + shift);
 }
 
-static boolean pause_settings_item_hidden(long tag_index)
+static boolean pause_settings_item_hidden(long tag_index, boolean gamepads_only)
 {
+	long gamepads = widget_named(PAUSE_GAMEPADS_ITEM);
 	short index;
 
+	/* Controls Setup has the controller rows, so a game does not also list
+	Gamepads. A multiplayer pause keeps the other profile rows. */
+	if (gamepads != NONE && build.widget_tags[gamepads] == tag_index)
+		return TRUE;
+	if (gamepads_only)
+		return FALSE;
 	for (index = 0; index < (short)NUMBEROF(pause_settings_hidden_items); index++)
 	{
 		long widget = widget_named(pause_settings_hidden_items[index]);
@@ -2051,7 +2060,7 @@ static void pause_network_patch(void)
 /* the hidden items stay in the list, empty and taking no events (which it
 passes over), as an item's description is the one at its place in the list;
 the others move up into the first places */
-static void pause_settings_patch(void)
+static void pause_settings_patch(boolean gamepads_only)
 {
 	long list_widget = widget_named(PAUSE_SETTINGS_LIST);
 	long ok_widget = widget_named(PAUSE_SETTINGS_GAMEPADS_OK);
@@ -2079,7 +2088,7 @@ static void pause_settings_patch(void)
 
 		if (item->type != _widget_type_text_box)
 			continue;
-		if (pause_settings_item_hidden(children[child].widget_tag.index))
+		if (pause_settings_item_hidden(children[child].widget_tag.index, gamepads_only))
 		{
 			item->event_handlers.count = 0;
 			reference_clear(&item->background_bitmap, BITMAP_GROUP_TAG);
@@ -2171,7 +2180,7 @@ static void pause_campaign_patch(struct cache_file_tag_instance *instances)
 				pause_campaign_shift_prompts(definition, need);
 				pause_campaign_grow_box(definition, need);
 			}
-			pause_settings_patch();
+			pause_settings_patch(FALSE);
 			platform_log("menus: the pause menu has SETTINGS%s", build.coop ? " and FRIENDLY FIRE" : "");
 		}
 		return;
@@ -2355,6 +2364,8 @@ void menu_tags_loaded(
 		pause_patch(instances);
 		if (campaign)
 			pause_campaign_patch(instances);
+		else
+			pause_settings_patch(TRUE);
 		pause_network_patch();
 		if (build.failed)
 			goto failed;

@@ -538,11 +538,11 @@ def _setting_screen(folder: str, spec: dict) -> list:
 
 
 def _controls_screen() -> list:
-    """Controls Setup, in the same tall rows as Gamepads and the other
-    settings screens. The keyboard bindings are grouped so they fit under
-    those rows. The help strings are what controls_update shows: a profile
-    row's label index, 5 for the group, 6 for a binding row and 7 while a
-    key is being chosen."""
+    """Controls Setup, in the same tall rows as the other settings screens.
+    The controller rows are Gamepads' (including the ones Controls did not
+    have). The keyboard bindings are the last row's screen, grouped so they
+    fit under those rows. That screen's help is what controls_update shows:
+    0 the group, 1 a binding row and 2 while a key is being chosen."""
     folder = "controls_setup"
     base = f"{PE}/{folder}"
     spec = {"screen": "controls_settings_screen", "spacing": 30, "mouse_accept": True,
@@ -552,15 +552,26 @@ def _controls_screen() -> list:
     spin_y = 1 if metrics["spin_y"] is None else metrics["spin_y"]
     profile_rows = [
         ("horizontal_sensitivity", "RIGHT STICK HORIZONTAL:", "profile.horizontal_sensitivity",
-         LOOK_STEPS),
+         LOOK_STEPS, "How fast the view turns left and right. 3 is the\\noriginal setting."),
         ("vertical_sensitivity", "RIGHT STICK VERTICAL:", "profile.vertical_sensitivity",
-         LOOK_STEPS),
-        ("invert_look", "INVERT LOOK:", "profile.invert_look", YES_NO),
-        ("button_preset", "BUTTON LAYOUT:", "profile.button_preset", BUTTON_LAYOUTS),
-        ("joystick_preset", "STICK LAYOUT:", "profile.joystick_preset", STICK_LAYOUTS),
+         LOOK_STEPS, "How fast the view turns up and down. 3 is the\\noriginal setting."),
+        ("invert_look", "INVERT LOOK:", "profile.invert_look", YES_NO,
+         "Pushing the right stick up looks down."),
+        ("flight_inversion", "INVERT FLIGHT:", "profile.flight_inversion", YES_NO,
+         "Flying vehicles pitch as aircraft do: pushing up\\nflies down."),
+        ("autocenter", "AUTO-CENTER LOOK:", "profile.autocenter", YES_NO,
+         "Level the view while walking."),
+        ("button_preset", "BUTTON LAYOUT:", "profile.button_preset", BUTTON_LAYOUTS,
+         "Which of the controller's buttons does what."),
+        ("joystick_preset", "STICK LAYOUT:", "profile.joystick_preset", STICK_LAYOUTS,
+         "Which stick moves and which looks."),
+        ("vibration", "VIBRATION:", "profile.vibration", ON_OFF,
+         "Rumble the controller."),
+        ("ingame_help", "IN-GAME HELP:", "profile.ingame_help", ON_OFF,
+         "Show the game's hints about its controls."),
     ]
     rows, extra = [], []
-    for index, (key, _label, setting, choices) in enumerate(profile_rows):
+    for index, (key, _label, setting, choices, _help) in enumerate(profile_rows):
         row = f"{base}/op_{key}"
         rows.append((row, None))
         extra += _widget(row, [("width", 512), ("height", metrics["row"]), ("flags", "pass_unhandled_to_focused_child"),
@@ -581,60 +592,82 @@ def _controls_screen() -> list:
                           ("header_bounds", f"{metrics['arrow_y']} -6 {metrics['arrow_b']} 0"),
                           ("footer_bounds", f"{metrics['arrow_y']} 150 {metrics['arrow_b']} 156")],
                          ['<on event="created" run="port setting load"/>'])
-    rows.append((f"{base}/op_group", None))
-    extra += _widget(f"{base}/op_group", [("width", 512), ("height", metrics["row"]),
-                                          ("flags", "pass_unhandled_to_focused_child"),
-                                          ("bitmap", metrics["bitmap"]), ("color", "#FF2896FF")],
-                     [f'<child{attributes([("widget", f"{base}/group_label")])}/>',
-                      f'<child{attributes([("widget", f"{base}/group_spinner"), ("x", 200), ("y", 1)])}/>'])
-    extra += _widget(f"{base}/group_label",
-                     [("type", "text"), ("controller", 1), ("width", 200), ("height", metrics["label"]),
-                      ("text", "SHOW:"), ("font", metrics["font"]), ("color", "#FF2896FF"), ("text_x", 13),
-                      ("text_y", metrics["label_y"])], [])
-    extra += _widget(f"{base}/group_spinner",
-                     [("type", "spinner"), ("left", 3), ("top", metrics["spin_top"]), ("width", 297),
-                      ("height", metrics["spin"]), ("flags", "pass_unhandled_to_focused_child left_right_tabs_items"),
-                      ("strings", "|".join(CONTROL_GROUPS)), ("font", metrics["font"]), ("color", "#FF2896FF"),
-                      ("align", "center"), ("text_y", spin_y),
-                      ("header_bitmap", "bitmaps/arrow_sm_left"), ("footer_bitmap", "bitmaps/arrow_sm_right"),
-                      ("header_bounds", f"{metrics['arrow_y']} -6 {metrics['arrow_b']} 0"),
-                      ("footer_bounds", f"{metrics['arrow_y']} 300 {metrics['arrow_b']} 306")], [])
-    for index in range(CONTROL_ROWS):
-        row = f"{base}/op_command_{index + 1}"
-        rows.append((row, None))
-        extra += _widget(row, [("width", 512), ("height", metrics["row"]), ("flags", "pass_unhandled_to_focused_child"),
-                               ("bitmap", metrics["bitmap"]), ("color", "#FF2896FF")],
-                         ['<on event="a" run="controls begin binding"/>',
-                          '<on event="start" run="controls begin binding"/>',
-                          '<on event="left right" run="controls binding slot"/>',
-                          f'<child{attributes([("widget", f"{base}/command_label")])}/>',
-                          f'<child{attributes([("widget", f"{base}/command_binding"), ("x", 200)])}/>',
-                          f'<child{attributes([("widget", f"{base}/command_binding"), ("x", 356)])}/>'])
-    extra += _widget(f"{base}/command_label",
-                     [("type", "text"), ("controller", 1), ("width", 200), ("height", metrics["label"]),
+    keys = f"{base}/keyboard"
+    rows.append((f"{base}/op_keyboard", None))
+    extra += _widget(f"{base}/op_keyboard", [("width", 512), ("height", metrics["row"]),
+                                             ("flags", "pass_unhandled_to_focused_child"),
+                                             ("bitmap", metrics["bitmap"]), ("color", "#FF2896FF")],
+                     [f'<on event="a" open="{keys}/keyboard_screen"/>',
+                      f'<on event="start" open="{keys}/keyboard_screen"/>',
+                      '<on event="left_mouse" run="mouse emit accept event"/>',
+                      f'<child widget="{base}/keyboard_label"/>'])
+    extra += _widget(f"{base}/keyboard_label",
+                     [("type", "text"), ("controller", 1), ("width", 512), ("height", metrics["label"]),
+                      ("string_list", f"{base}/labels"), ("string_index", len(profile_rows)),
                       ("font", metrics["font"]), ("color", "#FF2896FF"), ("text_x", 13),
                       ("text_y", metrics["label_y"])], [])
-    extra += _widget(f"{base}/command_binding",
-                     [("type", "text"), ("controller", 1), ("width", 152), ("height", metrics["label"]),
-                      ("font", metrics["font"]), ("color", "#FF2896FF"), ("align", "center"),
-                      ("text_y", metrics["label_y"]), ("text_flags", "no_focus_test")], [])
     extra += _button(f"{base}/button_defaults", 3, ['<on event="a" run="controls screen defaults"/>',
                                                     '<on event="start" run="controls screen defaults"/>'])
     extra += _button(f"{base}/button_ok", 1, ['<on event="a" run="controls screen change set" back="true"/>',
                                               '<on event="start" run="controls screen change set" back="true"/>'])
-    extra += _strings(f"{base}/labels", [label for _, label, *_ in profile_rows] + ["SHOW:"])
-    extra += _strings(f"{base}/help_strings", [
-        "How fast the view turns left and right. 3 is the\\noriginal setting.",
-        "How fast the view turns up and down. 3 is the\\noriginal setting.",
-        "Pushing the right stick up looks down.",
-        "Which of the controller's buttons does what. The\\nkeyboard's keys are the rows below.",
-        "Which stick moves and which looks.",
+    extra += _strings(f"{base}/labels", [label for _, label, *_ in profile_rows] + ["KEYBOARD:"])
+    # (port settings help: the buttons' line is 0, then one line per row)
+    extra += _strings(f"{base}/help_strings",
+                      [""] + [row[4] for row in profile_rows] + ["The keyboard and mouse keys."])
+    key_rows = [(f"{keys}/op_group", None)]
+    key_extra = []
+    key_extra += _widget(f"{keys}/op_group", [("width", 512), ("height", metrics["row"]),
+                                              ("flags", "pass_unhandled_to_focused_child"),
+                                              ("bitmap", metrics["bitmap"]), ("color", "#FF2896FF")],
+                         [f'<child{attributes([("widget", f"{keys}/group_label")])}/>',
+                          f'<child{attributes([("widget", f"{keys}/group_spinner"), ("x", 200), ("y", 1)])}/>'])
+    key_extra += _widget(f"{keys}/group_label",
+                         [("type", "text"), ("controller", 1), ("width", 200), ("height", metrics["label"]),
+                          ("text", "SHOW:"), ("font", metrics["font"]), ("color", "#FF2896FF"), ("text_x", 13),
+                          ("text_y", metrics["label_y"])], [])
+    key_extra += _widget(f"{keys}/group_spinner",
+                         [("type", "spinner"), ("left", 3), ("top", metrics["spin_top"]), ("width", 297),
+                          ("height", metrics["spin"]), ("flags", "pass_unhandled_to_focused_child left_right_tabs_items"),
+                          ("strings", "|".join(CONTROL_GROUPS)), ("font", metrics["font"]), ("color", "#FF2896FF"),
+                          ("align", "center"), ("text_y", spin_y),
+                          ("header_bitmap", "bitmaps/arrow_sm_left"), ("footer_bitmap", "bitmaps/arrow_sm_right"),
+                          ("header_bounds", f"{metrics['arrow_y']} -6 {metrics['arrow_b']} 0"),
+                          ("footer_bounds", f"{metrics['arrow_y']} 300 {metrics['arrow_b']} 306")], [])
+    for index in range(CONTROL_ROWS):
+        row = f"{keys}/op_command_{index + 1}"
+        key_rows.append((row, None))
+        key_extra += _widget(row, [("width", 512), ("height", metrics["row"]),
+                                   ("flags", "pass_unhandled_to_focused_child"),
+                                   ("bitmap", metrics["bitmap"]), ("color", "#FF2896FF")],
+                             ['<on event="a" run="controls begin binding"/>',
+                              '<on event="start" run="controls begin binding"/>',
+                              '<on event="left right" run="controls binding slot"/>',
+                              f'<child{attributes([("widget", f"{keys}/command_label")])}/>',
+                              f'<child{attributes([("widget", f"{keys}/command_binding"), ("x", 200)])}/>',
+                              f'<child{attributes([("widget", f"{keys}/command_binding"), ("x", 356)])}/>'])
+    key_extra += _widget(f"{keys}/command_label",
+                         [("type", "text"), ("controller", 1), ("width", 200), ("height", metrics["label"]),
+                          ("font", metrics["font"]), ("color", "#FF2896FF"), ("text_x", 13),
+                          ("text_y", metrics["label_y"])], [])
+    key_extra += _widget(f"{keys}/command_binding",
+                         [("type", "text"), ("controller", 1), ("width", 152), ("height", metrics["label"]),
+                          ("font", metrics["font"]), ("color", "#FF2896FF"), ("align", "center"),
+                          ("text_y", metrics["label_y"]), ("text_flags", "no_focus_test")], [])
+    key_extra += _button(f"{keys}/button_defaults", 3, ['<on event="a" run="controls screen defaults"/>',
+                                                       '<on event="start" run="controls screen defaults"/>'])
+    key_extra += _button(f"{keys}/button_ok", 1, ['<on event="a" run="controls screen change set" back="true"/>',
+                                                  '<on event="start" run="controls screen change set" back="true"/>'])
+    key_extra += _strings(f"{keys}/help_strings", [
         "Choose what to show, with left and right.",
         "Enter sets the key chosen; left and right choose\\nwhich of two. Then press the new key or button.",
         "Press a key, a mouse button or turn the wheel...\\nEscape cancels, Delete clears it.",
     ])
-    return _screen(folder, spec, rows, ["controls update menu"], ['<on event="created" run="controls screen init"/>'],
-                   extra)
+    key_spec = {"screen": "keyboard_screen", "spacing": 30, "mouse_accept": True,
+                "help_top": 376, "help_height": 46, "button_y": 430,
+                "header": ("header_profile_controls_settings", f"{base}/header_profile_controls_settings")}
+    return (_screen(folder, spec, rows, ["port settings help"],
+                    ['<on event="created" run="controls screen init"/>'], extra) +
+            _screen("controls_setup/keyboard", key_spec, key_rows, ["controls update menu"], [], key_extra))
 
 
 def settings_files() -> dict:

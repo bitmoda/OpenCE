@@ -29,12 +29,12 @@ calls them from PC_MENU_FUNCTION_BASE on):
   config.toml themselves), "port settings defaults" shows the defaults,
   "port settings help" the help of the row chosen (and Video Setup's
   Resolution or Window Size, for the display mode shown);
-- Controls Setup's: the keyboard and mouse's controls, two bindings each,
-  shown a group at a time ("controls update menu"); "controls begin
-  binding" takes the next key or button pressed for the binding left and
-  right choose ("controls binding slot"); OK ("controls screen change set")
-  writes them and the profile's controller settings (the same ones Gamepads
-  saves), "controls screen defaults" shows the defaults.
+- Controls Setup's controller rows, and its keyboard screen: the keyboard
+  and mouse's controls, two bindings each, shown a group at a time
+  ("controls update menu"); "controls begin binding" takes the next key or
+  button pressed for the binding left and right choose ("controls binding
+  slot"); OK ("controls screen change set") writes them and the profile's
+  controller settings, "controls screen defaults" shows the defaults.
 
 A spinner's values are its strings' (setting= and values= in its <widget>,
 menu_tags.c's pc_menu_setting).
@@ -2617,22 +2617,14 @@ static void controls_update(struct widget_instance *list)
 	}
 	if (list->parameters.list.extended_description)
 	{
-		/* help_strings: a profile row's label, 5 for the key group, 6 for a
-		binding row, 7 while a key is being chosen */
-		short index = 5;
+		/* the keyboard screen's help: 0 the group, 1 a binding row, 2 while
+		a key is being chosen */
+		short index = 0;
 
 		if (controls_screen.capturing_control != NONE)
-			index = 7;
+			index = 2;
 		else if (focused_row)
-			index = 6;
-		else if (list->focused_child && !strncmp(list->focused_child->name, "op_", 3) &&
-			strncmp(list->focused_child->name, "op_command_", 11) && list->focused_child->child)
-		{
-			short label = pc_menu_string_index(list->focused_child->child->definition_tag_index);
-
-			if (label != NONE && label < 5)
-				index = label;
-		}
+			index = 1;
 		list->parameters.list.extended_description->parameters.text_box.string_list_index = index;
 	}
 }
