@@ -38,7 +38,10 @@ enum
 struct ui_widget_definition
 {
 	short type;                         /* 0x000 */
-	byte unknown002[0x52];              /* 0x002 */
+	short controller_index;             /* 0x002 */
+	char name[32];                      /* 0x004 */
+	rectangle2d bounds;                 /* 0x024 */
+	byte unknown02C[0x28];              /* 0x02C */
 	struct tag_block event_handlers;    /* 0x054 */
 	byte unknown060[0xF0];              /* 0x060 */
 	long list_flags;                    /* 0x150 */

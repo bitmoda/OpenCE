@@ -531,23 +531,30 @@ void input_abstraction_update(
 			long control_index;
 			boolean invert_look;
 
-			player_look_yaw_rate[controller_index] = input_abstraction_globals.player_control_preferences[controller_index].yaw_rate;
-			player_look_pitch_rate[controller_index] = input_abstraction_globals.player_control_preferences[controller_index].pitch_rate;
+			real controller_look_sens = (float)config_real("input.controller_look_sensitivity");
+			if (controller_look_sens <= 0.0f)
+				controller_look_sens = 1.0f;
+			real controller_move_sens = (float)config_real("input.controller_move_sensitivity");
+			if (controller_move_sens <= 0.0f)
+				controller_move_sens = 1.0f;
+
+			player_look_yaw_rate[controller_index] = input_abstraction_globals.player_control_preferences[controller_index].yaw_rate * controller_look_sens;
+			player_look_pitch_rate[controller_index] = input_abstraction_globals.player_control_preferences[controller_index].pitch_rate * controller_look_sens;
 			{
 				real scale;
 
 				left_angle = arctangent(gamepad->sticks[_gamepad_stick_left].y, gamepad->sticks[_gamepad_stick_left].x);
 				scale = 1.0 / MAX(fabs(sine(left_angle)), fabs(cosine(left_angle)));
-				left_stick.x = PIN(gamepad->sticks[_gamepad_stick_left].x * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
-				left_stick.y = PIN(gamepad->sticks[_gamepad_stick_left].y * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
+				left_stick.x = PIN(gamepad->sticks[_gamepad_stick_left].x * gamepad_axis_normalization_scale * scale * controller_move_sens, -1.f, 1.f);
+				left_stick.y = PIN(gamepad->sticks[_gamepad_stick_left].y * gamepad_axis_normalization_scale * scale * controller_move_sens, -1.f, 1.f);
 			}
 			{
 				real scale;
 
 				right_angle = arctangent(gamepad->sticks[_gamepad_stick_right].y, gamepad->sticks[_gamepad_stick_right].x);
 				scale = 1.0 / MAX(fabs(sine(right_angle)), fabs(cosine(right_angle)));
-				right_stick.x = PIN(gamepad->sticks[_gamepad_stick_right].x * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
-				right_stick.y = PIN(gamepad->sticks[_gamepad_stick_right].y * gamepad_axis_normalization_scale * scale, -1.f, 1.f);
+				right_stick.x = PIN(gamepad->sticks[_gamepad_stick_right].x * gamepad_axis_normalization_scale * scale * controller_look_sens, -1.f, 1.f);
+				right_stick.y = PIN(gamepad->sticks[_gamepad_stick_right].y * gamepad_axis_normalization_scale * scale * controller_look_sens, -1.f, 1.f);
 			}
 			for (control_index = 0; control_index < NUMBER_OF_GAME_CONTROLS; control_index++)
 			{

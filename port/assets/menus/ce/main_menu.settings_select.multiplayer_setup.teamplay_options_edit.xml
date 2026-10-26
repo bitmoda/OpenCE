@@ -13,7 +13,7 @@
 	<widget name="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/friendly_fire_penalty_spinner" type="spinner" left="3" top="2" width="147" height="20" flags="pass_unhandled_to_focused_child left_right_tabs_items" string_list="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/var_friendly_fire_penalty" font="ui\large_ui" color="#FF2896FF" align="center" text_y="4" list_flags="items_from_strings" header_bitmap="bitmaps/arrow_sm_left" footer_bitmap="bitmaps/arrow_sm_right" header_bounds="7 -6 19 0" footer_bounds="7 150 19 156">
 		<on event="left_mouse" run="mouse spinner 1wide click"/>
 	</widget>
-	<widget name="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/friendly_fire_spinner" type="spinner" top="2" width="206" height="20" flags="pass_unhandled_to_focused_child left_right_tabs_items" string_list="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/var_friendly_fire" font="ui\large_ui" color="#FF2896FF" align="center" text_y="4" list_flags="items_from_strings" header_bitmap="bitmaps/arrow_sm_left" footer_bitmap="bitmaps/arrow_sm_right" header_bounds="7 -13 19 -7" footer_bounds="7 208 19 214">
+	<widget name="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/friendly_fire_spinner" type="spinner" top="2" width="206" height="20" flags="pass_unhandled_to_focused_child left_right_tabs_items" string_list="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/var_friendly_fire" font="ui\large_ui" color="#FF2896FF" align="center" text_y="4" list_flags="items_from_strings" header_bitmap="bitmaps/arrow_sm_left" footer_bitmap="bitmaps/arrow_sm_right" header_bounds="7 -13 19 -7" footer_bounds="7 187 19 199">
 		<on event="left_mouse" run="mouse spinner 1wide click"/>
 	</widget>
 	<widget name="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/header_teamplay_options" controller="1" left="35" top="11" width="605" height="59" bitmap="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/header_teamplay_options">
@@ -43,7 +43,8 @@
 		<data input="common button bar update"/>
 		<child widget="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/teamplay_button_ok" x="380" y="1"/>
 		<child widget="common_button_cancel" x="510" y="1"/>
-	</widget>
+		<on event="right_trigger" run="mouse emit accept event"/>
+</widget>
 	<widget name="main_menu/settings_select/multiplayer_setup/teamplay_options_edit/teamplay_button_ok" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="1" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="a" run="mp prof save teamplay options" back="true"/>
 		<on event="start" run="mp prof save teamplay options" back="true"/>

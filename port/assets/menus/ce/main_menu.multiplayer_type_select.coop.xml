@@ -115,5 +115,6 @@
 		<data input="common button bar update"/>
 		<child widget="main_menu/profile_manager/profile_manager_button_ok" x="380" y="1"/>
 		<child widget="common_button_back" x="510" y="1"/>
-	</widget>
+		<on event="right_trigger" run="mouse emit accept event"/>
+</widget>
 </menus>

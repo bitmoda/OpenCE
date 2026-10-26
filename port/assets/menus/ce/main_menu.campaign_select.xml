@@ -38,13 +38,14 @@
 		<child widget="main_menu/campaign_select/load_level_select_button_delete" y="1"/>
 		<child widget="main_menu/solo_level_select/solo_level_select_button_ok" x="380" y="1"/>
 		<child widget="common_button_back" x="510" y="1"/>
-	</widget>
+		<on event="right_trigger" run="mouse emit accept event"/>
+</widget>
 	<widget name="main_menu/campaign_select/load_level_select_button_delete" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="5" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="a" run="mouse emit x event"/>
 		<on event="start" run="mouse emit x event"/>
 		<on event="left_mouse" run="mouse emit x event"/>
 	</widget>
-	<widget name="main_menu/campaign_select/load_level_select_list" type="column_list" width="640" height="480" flags="pass_unhandled_to_focused_child up_down_tabs_children" description="main_menu/campaign_select/load_level_extended_desc">
+	<widget name="main_menu/campaign_select/load_level_select_list" type="column_list" width="640" height="480" flags="pass_unhandled_to_focused_child up_down_tabs_items" description="main_menu/campaign_select/load_level_extended_desc">
 		<data input="load game list update"/>
 		<on event="created" run="load game menu init"/>
 		<on event="deleted" run="load game menu dispose"/>
