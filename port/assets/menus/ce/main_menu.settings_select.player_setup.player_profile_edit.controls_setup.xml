@@ -133,7 +133,7 @@
 	</widget>
 	<strings name="main_menu/settings_select/player_setup/player_profile_edit/controls_setup/labels">
 		<string text="RIGHT STICK HORIZONTAL:"/>
-		<string text="LEFT STICK VERTICAL:"/>
+		<string text="RIGHT STICK VERTICAL:"/>
 		<string text="INVERT LOOK:"/>
 		<string text="BUTTON LAYOUT:"/>
 		<string text="STICK LAYOUT:"/>

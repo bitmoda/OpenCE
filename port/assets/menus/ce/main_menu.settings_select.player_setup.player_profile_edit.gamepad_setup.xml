@@ -123,7 +123,7 @@
 	</widget>
 	<strings name="main_menu/settings_select/player_setup/player_profile_edit/gamepad_setup/labels">
 		<string text="RIGHT STICK HORIZONTAL:"/>
-		<string text="LEFT STICK VERTICAL:"/>
+		<string text="RIGHT STICK VERTICAL:"/>
 		<string text="INVERT LOOK:"/>
 		<string text="INVERT FLIGHT:"/>
 		<string text="AUTO-CENTER LOOK:"/>

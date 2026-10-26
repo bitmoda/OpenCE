@@ -188,7 +188,7 @@ SCREENS = {
         "rows": [
             ("RIGHT STICK HORIZONTAL:", "profile.horizontal_sensitivity", LOOK_STEPS,
              "How fast the view turns left and right. 3 is the\noriginal setting.", None),
-            ("LEFT STICK VERTICAL:", "profile.vertical_sensitivity", LOOK_STEPS,
+            ("RIGHT STICK VERTICAL:", "profile.vertical_sensitivity", LOOK_STEPS,
              "How fast the view turns up and down. 3 is the\noriginal setting.", None),
             ("INVERT LOOK:", "profile.invert_look", YES_NO, "Pushing the right stick up looks down.", None),
             ("INVERT FLIGHT:", "profile.flight_inversion", YES_NO,
@@ -553,7 +553,7 @@ def _controls_screen() -> list:
     profile_rows = [
         ("horizontal_sensitivity", "RIGHT STICK HORIZONTAL:", "profile.horizontal_sensitivity",
          LOOK_STEPS),
-        ("vertical_sensitivity", "LEFT STICK VERTICAL:", "profile.vertical_sensitivity",
+        ("vertical_sensitivity", "RIGHT STICK VERTICAL:", "profile.vertical_sensitivity",
          LOOK_STEPS),
         ("invert_look", "INVERT LOOK:", "profile.invert_look", YES_NO),
         ("button_preset", "BUTTON LAYOUT:", "profile.button_preset", BUTTON_LAYOUTS),
