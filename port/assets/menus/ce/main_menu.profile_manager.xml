@@ -42,7 +42,8 @@
 	<widget name="main_menu/profile_manager/pm_empty_selected_button_bar" type="column_list" width="256" height="20" flags="pass_unhandled_to_focused_child up_down_tabs_items left_right_tabs_items">
 		<child widget="main_menu/profile_manager/pm_empty_selected_button_ok"/>
 		<child widget="common_button_cancel" x="128"/>
-	</widget>
+		<on event="right_trigger" run="mouse emit accept event"/>
+</widget>
 	<widget name="main_menu/profile_manager/pm_empty_selected_button_ok" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="1" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="left_mouse" run="mouse emit accept event"/>
 	</widget>
@@ -62,7 +63,8 @@
 		<child widget="main_menu/profile_manager/profile_manager_button_edit" x="256" y="1"/>
 		<child widget="main_menu/profile_manager/profile_manager_button_ok" x="384" y="1"/>
 		<child widget="common_button_back" x="512" y="1"/>
-	</widget>
+		<on event="right_trigger" run="mouse emit accept event"/>
+</widget>
 	<widget name="main_menu/profile_manager/profile_manager_button_delete" type="text" width="128" height="24" bitmap="bitmaps/text_button_background" string_list="strings/common_button_captions" string_index="5" font="ui\small_ui" color="#FFFFFFFF" align="center" text_y="2">
 		<on event="a" run="mouse emit x event"/>
 		<on event="start" run="mouse emit x event"/>
@@ -83,7 +85,7 @@
 		<on event="start" run="emit custom activation event"/>
 		<on event="left_mouse" run="mouse emit accept event"/>
 	</widget>
-	<widget name="main_menu/profile_manager/profile_manager_select_list_2" type="column_list" width="640" height="480" flags="pass_unhandled_to_focused_child up_down_tabs_children" description="main_menu/profile_manager/player_profile_extended_desc">
+	<widget name="main_menu/profile_manager/profile_manager_select_list_2" type="column_list" width="640" height="480" flags="pass_unhandled_to_focused_child up_down_tabs_items" description="main_menu/profile_manager/player_profile_extended_desc">
 		<data input="3wide player profile list update"/>
 		<on event="created" run="player profile list initialize"/>
 		<on event="deleted" run="player profile list dispose"/>

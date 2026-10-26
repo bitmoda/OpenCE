@@ -5731,6 +5731,15 @@ static void widget_instance_render_spinner_list(
 				rectangle2d clip = clip_rect ? *clip_rect : definition->bounds;
 
 				bounds = definition->bounds;
+				/* port: a wide spinner's box runs past the column the other
+				rows' arrows share. Draw the value between those arrows. */
+				if (bounds.x0 < definition->list_header_bounds.x1 &&
+					bounds.x1 > definition->list_footer_bounds.x0 &&
+					definition->list_footer_bounds.x0 > definition->list_header_bounds.x1)
+				{
+					bounds.x0 = definition->list_header_bounds.x1;
+					bounds.x1 = definition->list_footer_bounds.x0;
+				}
 				bounds.x1 += offset.x;
 				bounds.y1 += offset.y;
 				bounds.x0 += offset.x;

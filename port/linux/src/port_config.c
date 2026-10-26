@@ -295,6 +295,12 @@ static const struct config_setting config_settings[] =
 		_platform_desktop,
 		"How far the view turns up and down for the mouse's movement; 0 for the\n"
 		"same as input.mouse_sensitivity." },
+	{ "input.controller_look_sensitivity", _config_real, "1.0", "HALO_CONTROLLER_LOOK_SENSITIVITY", _environment_value, _platform_all,
+		"Right stick look sensitivity (controller). 1.0 is the profile's look\n"
+		"sensitivity, 0.5 is half, 2.0 is double." },
+	{ "input.controller_move_sensitivity", _config_real, "1.0", "HALO_CONTROLLER_MOVE_SENSITIVITY", _environment_value, _platform_all,
+		"Left stick move sensitivity (controller). 1.0 is the base speed, 0.5\n"
+		"is half, 2.0 is double." },
 
 	/* the keyboard and mouse's own controls (port/linux/src/xinput_sdl.c) */
 	{ "controls.move_forward", _config_string, "\"W\"", "HALO_KEY_MOVE_FORWARD", _environment_value, _platform_all,

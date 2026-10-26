@@ -4176,7 +4176,7 @@ static boolean player_profile_initialize_controller_settings(
 			option_spinner = option_spinner->next;
 		match_vassert("c:\\halo\\SOURCE\\interface\\ui_widget_event_handler_functions.c", 3816, option_spinner, "expected 'button config' option spinner list");
 		switch (profile->controller_settings.button_preset)
-		{
+	{
 		case _button_preset_standard:
 			option_spinner->data3C.selected_index = 0;
 			break;
@@ -4191,6 +4191,15 @@ static boolean player_profile_initialize_controller_settings(
 			break;
 		case _button_preset_swap_b_and_right_thumb:
 			option_spinner->data3C.selected_index = 4;
+			break;
+		case _button_preset_bumper_jumper:
+			option_spinner->data3C.selected_index = 5;
+			break;
+		case _button_preset_recon:
+			option_spinner->data3C.selected_index = 6;
+			break;
+		case _button_preset_fishsticks:
+			option_spinner->data3C.selected_index = 7;
 			break;
 		default:
 			option_spinner->data3C.selected_index = 0;
@@ -4830,6 +4839,9 @@ static boolean player_profile_change_controller_settings(
 		case _button_preset_swap_a_and_left_trigger: profile->controller_settings.button_preset = _button_preset_swap_a_and_left_trigger; return TRUE;
 		case _button_preset_swap_b_and_left_trigger: profile->controller_settings.button_preset = _button_preset_swap_b_and_left_trigger; return TRUE;
 		case _button_preset_swap_b_and_right_thumb: profile->controller_settings.button_preset = _button_preset_swap_b_and_right_thumb; return TRUE;
+		case _button_preset_bumper_jumper: profile->controller_settings.button_preset = _button_preset_bumper_jumper; return TRUE;
+		case _button_preset_recon: profile->controller_settings.button_preset = _button_preset_recon; return TRUE;
+		case _button_preset_fishsticks: profile->controller_settings.button_preset = _button_preset_fishsticks; return TRUE;
 		default: error(2, "unknown button config option selected"); return TRUE;
 		}
 	}

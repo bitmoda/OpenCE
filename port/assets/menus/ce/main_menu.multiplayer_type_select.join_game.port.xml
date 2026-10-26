@@ -21,7 +21,8 @@
 		
 		<child widget="main_menu/multiplayer_type_select/join_game/password/button_ok" x="380" y="1"/>
 		<child widget="common_button_cancel" x="510" y="1"/>
-	</widget>
+		<on event="right_trigger" run="mouse emit accept event"/>
+</widget>
 	<widget name="main_menu/multiplayer_type_select/join_game/password/op_password" width="512" height="28" flags="pass_unhandled_to_focused_child" bitmap="bitmaps/option_bkds" color="#FF2896FF">
 		<on event="a" run="port password edit"/>
 		<on event="start" run="port password edit"/>
