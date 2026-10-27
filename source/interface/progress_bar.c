@@ -1913,17 +1913,19 @@ static void draw_layer_int(
 	IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_DIFFUSE,
 		color->red, color->green, color->blue, alpha);
 	mask_position= progress*768.f - 64.f - 64.f;
+	/* port: the picture's first row is its top. these vertices had that row
+	at the bottom of the screen, so a match's loading picture was upside down */
 	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD1, 0.f - mask_position, 0.f);
-	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, 0.f, half_height);
+	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, 0.f, 0.f);
 	IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, rect.x0, rect.y0, 0.5f, 1.f);
 	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD1, 640.f - mask_position, 0.f);
-	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, half_width, half_height);
+	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, half_width, 0.f);
 	IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, rect.x1, rect.y0, 0.5f, 1.f);
 	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD1, 640.f - mask_position, 16.f);
-	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, half_width, 0.f);
+	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, half_width, half_height);
 	IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, rect.x1, rect.y1, 0.5f, 1.f);
 	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD1, 0.f - mask_position, 16.f);
-	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, 0.f, 0.f);
+	IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, 0.f, half_height);
 	IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, rect.x0, rect.y1, 0.5f, 1.f);
 	IDirect3DDevice8_End(global_d3d_device);
 
@@ -2142,15 +2144,17 @@ void progress_bar_show_picture(
 		real v_top= -pad/span_y*(real)height;
 		real v_bottom= (span_y + pad)/span_y*(real)height;
 
+		/* the first row is the top of the film. y0 is the same screen edge
+		the sweep's picture uses for its first row */
 		IDirect3DDevice8_Begin(global_d3d_device, D3DPT_TRIANGLEFAN);
 		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_DIFFUSE, 1.f, 1.f, 1.f, opacity);
-		IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, u0, v_bottom);
-		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, x0, y0, 0.5f, 1.f);
-		IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, u1, v_bottom);
-		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, x1, y0, 0.5f, 1.f);
-		IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, u1, v_top);
-		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, x1, y1, 0.5f, 1.f);
 		IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, u0, v_top);
+		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, x0, y0, 0.5f, 1.f);
+		IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, u1, v_top);
+		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, x1, y0, 0.5f, 1.f);
+		IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, u1, v_bottom);
+		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, x1, y1, 0.5f, 1.f);
+		IDirect3DDevice8_SetVertexData2f(global_d3d_device, D3DVSDE_TEXCOORD0, u0, v_bottom);
 		IDirect3DDevice8_SetVertexData4f(global_d3d_device, D3DVSDE_VERTEX, x0, y1, 0.5f, 1.f);
 		IDirect3DDevice8_End(global_d3d_device);
 	}
