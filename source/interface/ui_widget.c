@@ -7307,20 +7307,17 @@ static void widget_instance_render_recursive(
 			&bitmap_group->sequences,
 			0,
 			struct bitmap_group_sequence);
-		/* port: a widget whose bounds cover the whole 640x480 design space (the
-		 * pause menu's dim, for example) should cover the whole screen too,
-		 * not just the centered 640 columns -- same as the fade_to_black
-		 * quad in render_ui_widgets(). Both the bounds and the clip are
-		 * widened symmetrically below, before the centering offset is
-		 * added. Only flat fills (the dims, and the menus' vertical
-		 * gradient, at most 16 texels wide): a picture is drawn texel for
-		 * texel, so wider bounds would shift it (the loading screen). */
-		boolean widen_to_screen =
+		/* port: a flat fill behind a screen (the pause dim, the menus'
+		gradient) covers this pane. split panes are 240 tall, and a quarter
+		pane is 320 wide, so the old 640x480 test left their sides undimmed.
+		only a fill at most 16 wide is stretched: a picture is drawn texel
+		for texel, and wider bounds would shift it (the loading screen) */
+		boolean screen_fill =
 			bounds.x0 <= 0 && bounds.y0 <= 0 &&
-			bounds.x1 >= 640 && bounds.y1 >= 480 &&
-			bitmap->width <= 16 &&
-			halo_screen_width() > 640;
+			bounds.x1 >= 300 && bounds.y1 >= 200 &&
+			bitmap->width <= 16;
 		boolean pane_dim = FALSE;
+		boolean fill_pane = FALSE;
 
 		if (use_nifty_plasma_fx)
 		{
@@ -7330,7 +7327,7 @@ static void widget_instance_render_recursive(
 			ui_plasma_effect_color.blue = 0.05f;
 		}
 		/* port: the dim covers this pane. the menu on top of it is scaled */
-		if (widen_to_screen && rasterizer_screen_fit_drawing())
+		if (screen_fill && rasterizer_screen_fit_drawing())
 		{
 			short pane_w;
 			short pane_h;
@@ -7342,11 +7339,17 @@ static void widget_instance_render_recursive(
 			bounds.x1 = pane_w;
 			bounds.y1 = pane_h;
 		}
-		else if (widen_to_screen)
+		else if (screen_fill && clip_rect && offset.x == 0 && offset.y == 0)
 		{
-			long extra = (halo_screen_width() - 640) / 2;
-			bounds.x0 -= (short)extra;
-			bounds.x1 = (short)(640 + extra);
+			/* the centering shift is added as the quad is drawn. placed
+			this way, the fill is the pane after that shift */
+			long shift = (halo_screen_width() - 640) / 2;
+
+			fill_pane = TRUE;
+			bounds.x0 = (short)(clip_rect->x0 - shift);
+			bounds.y0 = clip_rect->y0;
+			bounds.x1 = (short)(clip_rect->x1 - shift);
+			bounds.y1 = clip_rect->y1;
 		}
 		bounds.x0 += offset.x;
 		bounds.x1 += offset.x;
@@ -7361,16 +7364,14 @@ static void widget_instance_render_recursive(
 			clip->y0 += offset.y;
 			clip->y1 += offset.y;
 		}
-		if (widen_to_screen && clip && !pane_dim)
+		if (fill_pane && clip)
 		{
-			/* widen the clip by the same amount (it is offset-shifted but
-			 * still 640-wide at the edges) so the dim is not clipped back
-			 * to the centered columns */
-			long extra = (halo_screen_width() - 640) / 2;
-			if (clip->x0 <= 0)
-				clip->x0 -= (short)extra;
-			if (clip->x1 >= 640)
-				clip->x1 = (short)(clip->x1 + extra);
+			/* the fill is in pre-shift coordinates. the clip has to match,
+			or it cuts the fill back to the centered columns */
+			clip->x0 = bounds.x0;
+			clip->y0 = bounds.y0;
+			clip->x1 = bounds.x1;
+			clip->y1 = bounds.y1;
 		}
 		if (TEST_FLAG(definition->flags, _widget_flash_background_bitmap_bit))
 		{
@@ -7591,36 +7592,55 @@ void render_ui_widgets_postgame(
 	return;
 }
 
-/* port: the single screen menu, shrunk to this pane and centered in it.
+/* port: a menu laid out for the whole 640x480 screen, drawn into one pane
+and centered there. split screen panes are half of that, or a quarter.
 the full screen's centering offset would shove it out of a corner */
-static void hardcore_pause_fit_begin(
+static void pause_menu_fit_begin(
 	rectangle2d const *window_bounds,
 	short local_player_index)
 {
+	struct widget_instance *widget;
+	struct ui_widget_definition *definition;
 	long pane_w;
 	long pane_h;
+	long design_w;
+	long design_h;
 	real sx;
 	real sy;
 	real scale;
 	real center_x;
 	real center_y;
 
-	rasterizer_screen_fit_clear();
-	if (!hardcore_views_split() || local_player_index < 0 ||
-		local_player_index >= MAXIMUM_NUMBER_OF_LOCAL_PLAYERS ||
-		!widget_globals.active_widgets[local_player_index])
+	if (local_player_index == 0)
+		rasterizer_screen_fit_clear();
+	if (we_are_at_the_main_menu || local_player_index < 0 ||
+		local_player_index >= MAXIMUM_NUMBER_OF_LOCAL_PLAYERS)
 		return;
+	widget = widget_globals.active_widgets[local_player_index];
+	if (!widget)
+		return;
+	definition = ui_widget_definition_get(widget->definition_tag_index);
+	design_w = definition->bounds.x1 - definition->bounds.x0;
+	design_h = definition->bounds.y1 - definition->bounds.y0;
+	/* a teammate pane shows the single screen pause menu */
+	if (hardcore_views_split())
+	{
+		design_w = 640;
+		design_h = 480;
+	}
 	pane_w = window_bounds->x1 - window_bounds->x0;
 	pane_h = window_bounds->y1 - window_bounds->y0;
-	if (pane_w < 1 || pane_h < 1)
+	if (pane_w < 1 || pane_h < 1 || design_w < 1 || design_h < 1)
 		return;
-	sx = (real)pane_w / 640.0f;
-	sy = (real)pane_h / 480.0f;
+	if (design_w <= pane_w && design_h <= pane_h)
+		return;
+	sx = (real)pane_w / (real)design_w;
+	sy = (real)pane_h / (real)design_h;
 	scale = sx < sy ? sx : sy;
 	if (!(scale > 0.05f && scale < 0.999f))
 		return;
-	center_x = ((real)pane_w - 640.0f * scale) * 0.5f;
-	center_y = ((real)pane_h - 480.0f * scale) * 0.5f;
+	center_x = ((real)pane_w - (real)design_w * scale) * 0.5f;
+	center_y = ((real)pane_h - (real)design_h * scale) * 0.5f;
 	halo_screen_ui_offset(FALSE);
 	rasterizer_screen_fit_begin(
 		scale,
@@ -7630,12 +7650,13 @@ static void hardcore_pause_fit_begin(
 		(real)window_bounds->y0,
 		(real)pane_w,
 		(real)pane_h,
-		(real)((halo_screen_width() - 640) / 2));
+		(real)((halo_screen_width() - 640) / 2),
+		local_player_index == 0);
 
 	return;
 }
 
-static void hardcore_pause_fit_end(
+static void pause_menu_fit_end(
 	void)
 {
 	if (!rasterizer_screen_fit_drawing())
@@ -7672,7 +7693,7 @@ void render_ui_widgets(
 			local_player_index,
 			0,
 			MAXIMUM_NUMBER_OF_LOCAL_PLAYERS - 1);
-		hardcore_pause_fit_begin(window_bounds, local_player_index);
+		pause_menu_fit_begin(window_bounds, local_player_index);
 		for (widget_index = 0;
 			widget_index < MAXIMUM_NUMBER_OF_LOCAL_PLAYERS;
 			widget_index++)
@@ -7761,7 +7782,7 @@ void render_ui_widgets(
 				}
 			}
 		}
-		hardcore_pause_fit_end();
+		pause_menu_fit_end();
 		if (first_players_render && !ui_mouse_targets_settled)
 		{
 			/* fit the legends while the rows are still targets (merging

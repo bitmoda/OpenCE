@@ -1697,6 +1697,51 @@ static boolean pause_box_stock(struct ui_widget_definition const *box)
 		tag_name_ends(pieces[2].widget_tag.index, "\\pausebox2_right");
 }
 
+/* the drawn box: the Xbox's 159, plus one button row for each button past
+the original two. the picture is 256 tall, with that box in the top and
+nothing under it */
+static short pause_box_visual(long buttons)
+{
+	return (short)(159 + (buttons - 2) * PAUSE_BUTTON_SPACING);
+}
+
+/* the button key belongs in the box footer (three units under its top).
+a split screen is 240 tall, so a box that would end below it slides up,
+and the list and the key move with it */
+static void pause_screen_keep_prompts(struct ui_widget_definition *screen,
+	struct ui_widget_child_reference *children, long box_child, long list_child, long buttons)
+{
+	short visual;
+	short box_y;
+	short limit;
+	short lift;
+	long key;
+	long child;
+
+	if (!screen || box_child == NONE || buttons < 2)
+		return;
+	visual = pause_box_visual(buttons);
+	box_y = children[box_child].vertical_offset;
+	limit = screen->bounds.y1;
+	key = NONE;
+	for (child = 0; child < screen->child_widgets.count; child++)
+	{
+		if (tag_name_ends(children[child].widget_tag.index, "\\button_key_sm") ||
+			tag_name_ends(children[child].widget_tag.index, "\\button_key"))
+			key = child;
+	}
+	if (key != NONE)
+		children[key].vertical_offset = (short)(box_y + visual - 25);
+	lift = (short)(box_y + visual - limit);
+	if (lift > 0)
+	{
+		children[box_child].vertical_offset = (short)(children[box_child].vertical_offset - lift);
+		children[list_child].vertical_offset = (short)(children[list_child].vertical_offset - lift);
+		if (key != NONE)
+			children[key].vertical_offset = (short)(children[key].vertical_offset - lift);
+	}
+}
+
 /* the stock box's pieces drawn with the port's taller box: its frame for
 the number of buttons */
 static void pause_box_redraw(struct ui_widget_definition const *box, long buttons)
@@ -1720,7 +1765,11 @@ static void pause_box_redraw(struct ui_widget_definition const *box, long button
 		sequence->first_bitmap_index = (short)PIN(buttons - PAUSE_BOX_FIRST_BUTTONS, 0, group->bitmaps.count - 1);
 		sequence->bitmap_count = 1;
 		reference_set(&definition->background_bitmap, BITMAP_GROUP_TAG, build.bitmap_tags[bitmap]);
-		definition->bounds.y1 = (short)(definition->bounds.y0 + 256);
+		/* the picture is 256 tall and the box is its top. a widget as tall
+		as the picture is clipped by the pane, and that squashes the box
+		so the footer no longer meets the prompts. the widget is the box,
+		and the draw samples those rows */
+		definition->bounds.y1 = (short)(definition->bounds.y0 + pause_box_visual(buttons));
 	}
 }
 
@@ -1801,6 +1850,8 @@ static void pause_patch(struct cache_file_tag_instance *instances)
 			pause_box_redraw(tag_get(UI_WIDGET_DEFINITION_TAG, children[box_child].widget_tag.index), buttons);
 			box_redrawn = TRUE;
 		}
+		if (box_child != NONE)
+			pause_screen_keep_prompts(definition, children, box_child, list_child, buttons);
 	}
 	if (patched_list != NONE)
 		platform_log("menus: the pause menu has SETTINGS%s", host ? " and END GAME" : "");

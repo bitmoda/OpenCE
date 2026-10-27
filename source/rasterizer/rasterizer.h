@@ -913,7 +913,8 @@ void rasterizer_screen_fit_begin(
 	real pane_y,
 	real pane_w,
 	real pane_h,
-	real ui_offset);
+	real ui_offset,
+	boolean record_hits);
 void rasterizer_screen_fit_pane(
 	short *width,
 	short *height);

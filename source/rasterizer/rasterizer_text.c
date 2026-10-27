@@ -861,7 +861,8 @@ void rasterizer_screen_fit_begin(
 	real pane_y,
 	real pane_w,
 	real pane_h,
-	real ui_offset)
+	real ui_offset,
+	boolean record_hits)
 {
 	text_scale = scale;
 	text_scale_origin_x = origin_x;
@@ -873,6 +874,10 @@ void rasterizer_screen_fit_begin(
 	screen_fit_origin_y = origin_y;
 	screen_fit_pane_w = pane_w;
 	screen_fit_pane_h = pane_h;
+	/* another pane in this frame already recorded the pointer. its menu
+	is the one the mouse drives */
+	if (!record_hits)
+		return;
 	screen_fit_hits = TRUE;
 	screen_hit_scale = scale;
 	screen_hit_origin_x = origin_x;
