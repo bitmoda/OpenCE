@@ -829,13 +829,31 @@ static boolean game_function(char const *name, struct widget_instance *widget, s
 /* Settings (the machine) or Profiles (the player). Settings is the main
 menu's and the pause menu's. Profiles' EDIT opens the same screen for the
 name, the color and the controller. */
-static boolean profile_menu_machine = TRUE;
+/* 1: Settings (the machine). 0: Profiles' EDIT. an int, so the test is the
+value itself */
+static int profile_menu_machine = 1;
 
 static struct widget_instance *named(struct widget_instance *widget, char const *name, long nth);
 static void visible_set(struct widget_instance *widget, boolean visible);
 
 /* "port profile rows": show one set, packed from the top. a game's pause
-menu settings keeps every row but the profile name, closed up. */
+menu settings drops the profile name and Gamepads (Controls Setup has
+those rows) and closes the rest up, including the slot Gamepads held
+between Controls and Mouse. */
+static int profile_row_named(char const *const *names, short count, char const *name)
+{
+	short index;
+
+	if (!name)
+		return 0;
+	for (index = 0; index < count; index++)
+	{
+		if (!strcmp(name, names[index]))
+			return 1;
+	}
+	return 0;
+}
+
 static void profile_rows_apply(struct widget_instance *list)
 {
 	static char const *const machine[] =
@@ -847,84 +865,59 @@ static void profile_rows_apply(struct widget_instance *list)
 	{
 		"name_profile_item", "gamepads_profile_item", "color_profile_item"
 	};
-	/* the top each row was given. the offset is added to that, so a packed
-	row's offset is where it should sit minus that top */
-	static struct
-	{
-		char const *name;
-		short top;
-	} all[] =
-	{
-		{ "name_profile_item", 78 },
-		{ "controller_setup_profile_item", 111 },
-		{ "gamepads_profile_item", 144 },
-		{ "mouse_settings_profile_item", 177 },
-		{ "audio_settings_profile_item", 210 },
-		{ "video_settings_profile_item", 243 },
-		{ "network_settings_profile_item", 276 },
-		{ "color_profile_item", 309 },
-		{ "about_item", 342 }
-	};
 	char const *const *show = profile_menu_machine ? machine : profile;
 	short show_count = profile_menu_machine ? (short)NUMBEROF(machine) : (short)NUMBEROF(profile);
+	/* pause settings keeps Change Color and Network. Profiles' EDIT keeps
+	its name row even if a match is running */
+	int pause_settings = !main_menu_is_active() && profile_menu_machine;
+	struct widget_instance *child;
 	short place = 0;
-	short index;
 
-	/* pause settings is the machine set. Profiles' EDIT keeps its name row
-	even if a match is running */
-	if (!main_menu_is_active() && profile_menu_machine)
-	{
-		struct widget_instance *name = named(list, "name_profile_item", 0);
-
-		visible_set(name, FALSE);
-		if (name)
-			name->disabled = TRUE;
-		/* the name row is the top one. the rest move up into its place */
-		for (index = 0; index < (short)NUMBEROF(all); index++)
-		{
-			struct widget_instance *row = named(list, all[index].name, 0);
-
-			if (!row || row == name)
-				continue;
-			row->vertical_offset = -33;
-		}
-		if (list->focused_child && !list->focused_child->visible)
-		{
-			struct widget_instance *child;
-
-			for (child = list->child; child; child = child->next)
-			{
-				if (child->visible && !child->disabled && child->type == 1)
-				{
-					list->focused_child = child;
-					break;
-				}
-			}
-		}
+	if (!list)
 		return;
-	}
-	for (index = 0; index < (short)NUMBEROF(all); index++)
+	for (child = list->child; child; child = child->next)
 	{
-		struct widget_instance *row = named(list, all[index].name, 0);
-		boolean on = FALSE;
-		short shown;
+		struct ui_widget_definition *definition;
+		short height;
+		int on;
+		int dropped;
 
-		if (!row)
+		if (child->type != 1)
 			continue;
-		for (shown = 0; shown < show_count; shown++)
-		{
-			if (!strcmp(all[index].name, show[shown]))
-				on = TRUE;
-		}
-		visible_set(row, on);
-		row->disabled = !on;
-		if (on)
-			row->vertical_offset = (short)(78 + 33 * place++ - all[index].top);
+		definition = ui_widget_definition_get(child->definition_tag_index);
+		height = definition ? (short)(definition->bounds.y1 - definition->bounds.y0) : 0;
+		dropped = child->name && (!strcmp(child->name, "name_profile_item") ||
+			!strcmp(child->name, "gamepads_profile_item"));
+		/* a collapsed row (the map's pause patch) has nothing to draw */
+		if (height < 8 || (pause_settings && dropped))
+			on = 0;
+		else if (pause_settings)
+			on = 1;
+		else
+			on = profile_row_named(show, show_count, child->name);
+		visible_set(child, on ? TRUE : FALSE);
+		child->disabled = on ? FALSE : TRUE;
 	}
-	if (list->focused_child && !list->focused_child->visible)
+	for (child = list->child; child; child = child->next)
 	{
-		struct widget_instance *child;
+		struct ui_widget_definition *definition;
+		short height;
 
+		if (child->type != 1 || !child->visible || child->disabled)
+			continue;
+		definition = ui_widget_definition_get(child->definition_tag_index);
+		if (!definition)
+			continue;
+		height = (short)(definition->bounds.y1 - definition->bounds.y0);
+		if (height < 8)
+			continue;
+		/* the offset is added to the row's own top, so this is where it
+		is drawn, whatever offset the tags already gave it */
+		child->vertical_offset = (short)(78 + 33 * place - definition->bounds.y0);
+		place++;
+	}
+	if (list->focused_child && (!list->focused_child->visible || list->focused_child->disabled))
+	{
 		for (child = list->child; child; child = child->next)
 		{
 			if (child->visible && !child->disabled && child->type == 1)
@@ -946,7 +939,7 @@ and only fails. */
 static boolean profile_edit_begin(struct widget_instance *widget, struct event_record *event,
 	boolean *widget_deleted)
 {
-	profile_menu_machine = TRUE;
+	profile_menu_machine = 1;
 	if (pc_menu_profile_edit_begin())
 		return TRUE;
 	/* (a press: the profile is made on its controller) */
@@ -978,10 +971,10 @@ static boolean profile_edit_open(struct widget_instance *widget, struct event_re
 	(void)widget_deleted;
 	if (!profile_choose(event_controller(widget, event)))
 		return FALSE;
-	profile_menu_machine = FALSE;
+	profile_menu_machine = 0;
 	if (!pc_menu_profile_edit_begin())
 	{
-		profile_menu_machine = TRUE;
+		profile_menu_machine = 1;
 		return FALSE;
 	}
 	return TRUE;
