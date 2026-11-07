@@ -105,6 +105,10 @@ void observer_update(
 
 struct observer_result const *observer_get_camera(
 	short local_player_index);
+/* the camera's velocity over the last game tick, for the sound listener */
+void observer_get_tick_velocity(
+	short local_player_index,
+	real_vector3d *velocity);
 
 /* port: a slot with no player hears a hardcore teammate. NULL clears
 the cluster, so the sound test stops using the last place. */

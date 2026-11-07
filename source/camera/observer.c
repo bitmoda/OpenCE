@@ -104,6 +104,7 @@ symbols in this file:
 #include "observer.h"
 
 #include "game/players.h"
+#include "game/game.h"
 #include "networking/network_connection.h"
 #include "cache/predicted_resources.h"
 #include "physics/collisions.h"
@@ -232,6 +233,23 @@ typedef char observer_size_assert[
 typedef char observer_globals_size_assert[
 	sizeof(struct observer_globals) == 0xA74 ? 1 : -1];
 
+/* The camera's velocity over the last game tick, for the sound listener.
+The observer runs once a frame, and its velocity is that frame's. A
+first-person camera snaps to the player after each tick, so that velocity
+is the tick's move over one frame: at 30 frames a second that is a tick,
+but faster it is several times too fast on the frame after the tick and
+nothing on the frames between. Every 3D sound takes that, less the
+listener's velocity, as its own, and the pitch warbles while the player
+moves. A snapping camera's moves are added up over the ticks they were
+made in. A camera gliding to its target keeps its own velocity. */
+struct observer_tick_velocity
+{
+	boolean valid;
+	long tick;
+	real_vector3d moved;
+	real_vector3d velocity;
+};
+
 /* ---------- prototypes */
 
 static struct observer *observer_get(
@@ -286,6 +304,12 @@ static void observer_update_displacements(
 	short local_player_index);
 static void observer_pass_time(
 	short local_player_index);
+static void observer_tick_velocity_add(
+	struct observer_tick_velocity *average,
+	long tick,
+	real dtime,
+	boolean gliding,
+	real_vector3d const *velocity);
 
 /* ---------- globals */
 
@@ -320,6 +344,7 @@ static short observer_parameter_derivative_real_counts[NUMBER_OF_OBSERVER_COMMAN
 };
 
 static struct observer_globals observer_globals;
+static struct observer_tick_velocity observer_tick_velocities[MAXIMUM_NUMBER_OF_LOCAL_PLAYERS];
 
 /* ---------- private code */
 
@@ -382,6 +407,7 @@ void observer_initialize_for_new_map(
 	{
 		observer_clear(observer_get(local_player_index));
 	}
+	csmemset(observer_tick_velocities, 0, sizeof(observer_tick_velocities));
 
 	return;
 }
@@ -389,6 +415,67 @@ void observer_initialize_for_new_map(
 void observer_dispose_from_old_map(
 	void)
 {
+	return;
+}
+
+void observer_get_tick_velocity(
+	short local_player_index,
+	real_vector3d *velocity)
+{
+	struct observer_tick_velocity const *average =
+		&observer_tick_velocities[local_player_index];
+
+	if (average->valid)
+	{
+		*velocity = average->velocity;
+	}
+	else
+	{
+		*velocity = observer_get_camera(local_player_index)->velocity;
+	}
+
+	return;
+}
+
+/* a frame of dtime seconds at this tick. velocity is the camera's own
+when it is gliding, or its move over the frame when it snaps */
+static void observer_tick_velocity_add(
+	struct observer_tick_velocity *average,
+	long tick,
+	real dtime,
+	boolean gliding,
+	real_vector3d const *velocity)
+{
+	if (!average->valid || tick < average->tick)
+	{
+		average->valid = TRUE;
+		average->tick = tick;
+		average->moved.i = average->moved.j = average->moved.k = 0.f;
+		average->velocity.i = average->velocity.j = average->velocity.k = 0.f;
+	}
+	if (gliding)
+	{
+		average->moved.i = average->moved.j = average->moved.k = 0.f;
+		average->velocity = *velocity;
+	}
+	else
+	{
+		average->moved.i += velocity->i*dtime;
+		average->moved.j += velocity->j*dtime;
+		average->moved.k += velocity->k*dtime;
+		/* the frame a tick ran in moves the camera by that tick */
+		if (tick != average->tick)
+		{
+			real scale = (real)TICKS_PER_SECOND/(real)(tick - average->tick);
+
+			average->velocity.i = average->moved.i*scale;
+			average->velocity.j = average->moved.j*scale;
+			average->velocity.k = average->moved.k*scale;
+			average->moved.i = average->moved.j = average->moved.k = 0.f;
+		}
+	}
+	average->tick = tick;
+
 	return;
 }
 
@@ -1333,6 +1420,7 @@ void observer_update(
 		if (local_player_get_player_index(local_player_index) != NONE)
 		{
 			struct observer *observer = observer_get(local_player_index);
+			boolean gliding, frozen;
 
 			match_assert(
 				"c:\\halo\\SOURCE\\camera\\observer.c",
@@ -1346,11 +1434,25 @@ void observer_update(
 
 			observer->updated_for_frame = TRUE;
 			observer_update_command(local_player_index);
+			/* as observer_update_velocities finds the focus: gliding to
+			its target over a timed command, or not */
+			gliding = observer->last_command.parameter_timers[_observer_command_parameter_focus_position] >
+				observer_globals.dtime;
+			frozen = TEST_FLAG(observer->pending_command->flags, _observer_command_freeze_camera_bit);
 			if (observer_globals.dtime != 0.f)
 			{
 				observer_pass_time(local_player_index);
 			}
 			observer_postcheck(local_player_index);
+			if (observer_globals.dtime != 0.f)
+			{
+				observer_tick_velocity_add(
+					&observer_tick_velocities[local_player_index],
+					game_time_get(),
+					observer_globals.dtime,
+					gliding && !frozen,
+					frozen ? global_zero_vector3d : &observer->result.velocity);
+			}
 
 			match_assert(
 				"c:\\halo\\SOURCE\\camera\\observer.c",
