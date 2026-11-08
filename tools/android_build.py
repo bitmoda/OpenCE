@@ -502,7 +502,10 @@ def generate_android_build(n: Writer, sln: Any) -> None:
             cflags += f" -include {PORT_DIR}/include/halo_android_variadic_prototypes.h"
         objects.append(guest_object(source, cflags))
     for source in sorted(Path(config["game_sources"]).glob("*.c")):
-        objects.append(guest_object(source, game_cflags))
+        cflags = game_cflags
+        if source.name == "clips.c":
+            cflags += " " + updater_defines(getattr(sln, "port_release", False))
+        objects.append(guest_object(source, cflags))
     objects.append(guest_object(STB_VORBIS_SOURCE, game_cflags))
     recast_cflags = recast_compile_flags(" ".join([guest_abi, guest_code]), " ".join(libc_includes))
     for source in recast_sources():

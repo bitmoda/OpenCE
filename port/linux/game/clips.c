@@ -4,7 +4,8 @@ players' actions and, for whoever sat at this machine, the pad, the keys
 and the mouse. A checkpoint every ten seconds is a hash of where the
 players stood. Left and right step one tick, and a hold steps faster
 the longer it is held. Backward loads the level again and runs up to
-that tick. A hash that does not match stops on the last tick that did. */
+that tick. A hash that does not match stops on the last tick that did, when the
+clip was recorded on this build. A clip from another build plays on. */
 
 #include "cseries.h"
 #include "clips.h"
@@ -1543,7 +1544,11 @@ static void clips_playback_tick(struct player_action *actions, int capacity)
 				return;
 			}
 			live = clips_hash(tick);
-			if (live != hash)
+			/* a newer build can stand a player a step away from where an
+			older one did. the recorded actions still run to the end.
+			a clip saved before the build number was written has build 0 */
+			if (live != hash && clips.header.build != 0 &&
+				clips.header.build == (long)HALO_BUILD_NUMBER)
 			{
 				clips_stop_mismatch(actions, capacity);
 				return;

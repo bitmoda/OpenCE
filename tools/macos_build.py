@@ -517,6 +517,10 @@ def main():
     update_build = resolve_update_build(args.update_build)
     update_channel = resolve_update_channel(args.update_channel)
     print(f"Fork updates: {update_channel + ' ' + str(update_build) if update_build else 'off'}")
+    # the guest clip recorder stamps this number into the file. a later
+    # build then knows the clip is from another build (clips.c)
+    os.environ["HALO_BUILD_NUMBER"] = str(update_build)
+    os.environ["HALO_BUILD_CHANNEL"] = update_channel
     if not args.host_only:
         llvm_bin = ROOT / "build/macos/toolchain/bin"
         require(llvm_bin / "llvm-ar")

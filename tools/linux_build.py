@@ -606,7 +606,10 @@ def generate_linux_build(n: Writer, sln: Any) -> None:
         # Port-specific units that must see the game exactly as its own
         # sources do (port/linux/game).
         for source in sorted(Path(config["game_sources"]).glob("*.c")):
-            add_object(source, game_cflags)
+            flags = game_cflags
+            if source.name == "clips.c":
+                flags += " " + updater_defines(getattr(sln, "port_release", False))
+            add_object(source, flags)
         add_object(STB_VORBIS_SOURCE, game_cflags)
         recast_flags = recast_compile_flags(abi)
         for source in recast_sources():
